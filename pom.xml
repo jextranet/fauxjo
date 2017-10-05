@@ -87,6 +87,12 @@
     </build>
 
 	<dependencies>
+        <dependency>
+            <groupId>net.jextra</groupId>
+            <artifactId>connectionsupplier</artifactId>
+            <version>[0,)</version>
+        </dependency>
+
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
