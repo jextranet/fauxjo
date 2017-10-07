@@ -90,7 +90,7 @@
         <dependency>
             <groupId>net.jextra</groupId>
             <artifactId>connectionsupplier</artifactId>
-            <version>[0,)</version>
+            <version>[1,)</version>
         </dependency>
 
 		<dependency>
