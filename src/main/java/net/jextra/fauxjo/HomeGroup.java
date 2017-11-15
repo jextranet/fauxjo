@@ -74,10 +74,10 @@ public class HomeGroup implements ConnectionSupplier {
     }
 
     @Override
-    public void close() throws SQLException {
+    public boolean close() throws SQLException {
         validateConnectionSupplier();
 
-        cs.close();
+        return cs.close();
     }
 
     public ConnectionSupplier getConnectionSupplier() {
