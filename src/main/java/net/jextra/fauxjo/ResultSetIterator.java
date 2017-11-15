@@ -48,6 +48,12 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
         hasNext = resultSet.next();
     }
 
+    public ResultSetIterator(ResultSet resultSet, Class<T> clzz) throws SQLException {
+        this.builder = new BeanBuilder<T>(clzz, true);
+        this.resultSet = resultSet;
+        hasNext = resultSet.next();
+    }
+
     // ============================================================
     // Methods
     // ============================================================
