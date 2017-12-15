@@ -343,6 +343,29 @@ public class Table<T> {
         }
     }
 
+    protected void retrieveGeneratedKeys(PreparedStatement statement, Object bean) throws SQLException {
+        if (generatedColumns == null || generatedColumns.length == 0) {
+            return;
+        }
+
+        ResultSet rsKeys = statement.getGeneratedKeys();
+        if (rsKeys.next()) {
+            Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+            for (String column : generatedColumns) {
+                try {
+                    Object value = rsKeys.getObject(column);
+                    if (value != null) {
+                        FieldDef fieldDef = beanFieldDefs.get(column);
+                        value = coercer.coerce(value, fieldDef.getValueClass());
+                    }
+                    writeValue(bean, column, value);
+                } catch (FauxjoException e) {
+                    throw new FauxjoException("Failed to coerce " + column, e);
+                }
+            }
+        }
+    }
+
     // ----------
     // private
     // ----------
@@ -423,27 +446,6 @@ public class Table<T> {
         }
 
         return val;
-    }
-
-    private void retrieveGeneratedKeys(PreparedStatement statement, Object bean) throws SQLException {
-        if (generatedColumns.length > 0) {
-            ResultSet rsKeys = statement.getGeneratedKeys();
-            if (rsKeys.next()) {
-                Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
-                for (String column : generatedColumns) {
-                    try {
-                        Object value = rsKeys.getObject(column);
-                        if (value != null) {
-                            FieldDef fieldDef = beanFieldDefs.get(column);
-                            value = coercer.coerce(value, fieldDef.getValueClass());
-                        }
-                        writeValue(bean, column, value);
-                    } catch (FauxjoException e) {
-                        throw new FauxjoException("Failed to coerce " + column, e);
-                    }
-                }
-            }
-        }
     }
 
     private Object readValue(Object bean, String key) throws FauxjoException {
