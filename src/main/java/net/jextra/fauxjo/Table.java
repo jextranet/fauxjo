@@ -24,6 +24,7 @@ package net.jextra.fauxjo;
 import java.lang.reflect.*;
 import java.sql.Array;
 import java.sql.*;
+import java.sql.Date;
 import java.util.*;
 import net.jextra.connectionsupplier.*;
 import net.jextra.fauxjo.beandef.*;
@@ -49,7 +50,7 @@ public class Table<T> {
 
     // Key = Lowercase column name (in source code, this is known as the "key").
     // Value = ColumnInfo object that specifies the type and real column name.
-    private Map<String,ColumnInfo> dbColumnInfos;
+    private Map<String, ColumnInfo> dbColumnInfos;
 
     private String updateSql;
     private String deleteSql;
@@ -140,8 +141,8 @@ public class Table<T> {
         StringBuilder columns = new StringBuilder();
         StringBuilder questionMarks = new StringBuilder();
 
-        Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
-        Map<String,ColumnInfo> dbColumnInfos = getDBColumnInfos(cs.getConnection());
+        Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+        Map<String, ColumnInfo> dbColumnInfos = getDBColumnInfos(cs.getConnection());
         List<String> generatedKeyColumns = new ArrayList<>();
         for (String key : dbColumnInfos.keySet()) {
             FieldDef fieldDef = beanFieldDefs.get(key);
@@ -175,7 +176,7 @@ public class Table<T> {
     }
 
     public void setInsertValues(PreparedStatement statement, T bean) throws SQLException {
-        Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+        Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
         int propIndex = 1;
         for (String key : getDBColumnInfos(statement.getConnection()).keySet()) {
             ColumnInfo columnInfo = getDBColumnInfos(statement.getConnection()).get(key);
@@ -193,7 +194,7 @@ public class Table<T> {
                         if (val == null) {
                             statement.setNull(propIndex, sqlType);
                         } else {
-                            Array array = statement.getConnection().createArrayOf("varchar", (Object[]) val);
+                            Array array = statement.getConnection().createArrayOf(getTypeName(val), (Object[]) val);
                             statement.setArray(propIndex, array);
                         }
                     } else {
@@ -249,7 +250,7 @@ public class Table<T> {
         List<DataValue> values = new ArrayList<>();
         List<DataValue> keyValues = new ArrayList<>();
 
-        Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+        Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
         for (String key : getDBColumnInfos(statement.getConnection()).keySet()) {
             ColumnInfo columnInfo = getDBColumnInfos(statement.getConnection()).get(key);
             Object val = getFieldValueFromBean(bean, key, columnInfo);
@@ -270,7 +271,7 @@ public class Table<T> {
                 if (value.getValue() == null) {
                     statement.setNull(propIndex, value.getSqlType());
                 } else {
-                    Array array = statement.getConnection().createArrayOf("varchar", (Object[]) value.getValue());
+                    Array array = statement.getConnection().createArrayOf(getTypeName(value.getValue()), (Object[]) value.getValue());
                     statement.setArray(propIndex, array);
                 }
             } else {
@@ -291,7 +292,7 @@ public class Table<T> {
 
         StringBuilder whereClause = new StringBuilder();
 
-        Map<String,FieldDef> fieldDefs = BeanDefCache.getFieldDefs(beanClass);
+        Map<String, FieldDef> fieldDefs = BeanDefCache.getFieldDefs(beanClass);
         for (String key : fieldDefs.keySet()) {
             FieldDef fieldDef = fieldDefs.get(key);
             if (fieldDef == null || !fieldDef.isPrimaryKey()) {
@@ -320,7 +321,7 @@ public class Table<T> {
     public void setDeleteValues(PreparedStatement statement, T bean) throws SQLException {
         List<DataValue> primaryKeyValues = new ArrayList<>();
 
-        Map<String,FieldDef> fieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+        Map<String, FieldDef> fieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
         for (String key : fieldDefs.keySet()) {
             FieldDef fieldDef = fieldDefs.get(key);
             if (fieldDef == null || !fieldDef.isPrimaryKey()) {
@@ -350,7 +351,7 @@ public class Table<T> {
 
         ResultSet rsKeys = statement.getGeneratedKeys();
         if (rsKeys.next()) {
-            Map<String,FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
+            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(bean.getClass());
             for (String column : generatedColumns) {
                 try {
                     Object value = rsKeys.getObject(column);
@@ -370,7 +371,7 @@ public class Table<T> {
     // private
     // ----------
 
-    private Map<String,ColumnInfo> getDBColumnInfos(Connection conn) throws SQLException {
+    private Map<String, ColumnInfo> getDBColumnInfos(Connection conn) throws SQLException {
         if (dbColumnInfos == null) {
             cacheColumnInfos(conn);
         }
@@ -391,7 +392,7 @@ public class Table<T> {
             throw new FauxjoException(String.format("Table %s does not exist.", fullTableName));
         }
 
-        HashMap<String,ColumnInfo> map = new HashMap<>();
+        HashMap<String, ColumnInfo> map = new HashMap<>();
 
         ResultSet rs = conn.getMetaData().getColumns(null, schemaName, realTableName, null);
         while (rs.next()) {
@@ -505,6 +506,24 @@ public class Table<T> {
 
             throw new FauxjoException(ex);
         }
+    }
+
+    private String getTypeName(Object val) {
+        String typeName = "varchar";
+        Class klass = val.getClass().getComponentType();
+        if (klass == UUID.class) {
+            typeName = "uuid";
+        } else if (klass == Date.class || klass == java.util.Date.class) {
+            typeName = "timestamptz";
+        } else if (klass == Integer.class) {
+            typeName = "int";
+        } else if (klass == Double.class) {
+            typeName = "float8";
+        } else if (klass == Boolean.class) {
+            typeName = "boolean";
+        }
+
+        return typeName;
     }
 
     // ============================================================
