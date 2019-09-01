@@ -1,20 +1,20 @@
 /*
- * Copyright (C) fauxjo.net.
+ * Copyright (C) jextra.net.
  *
- * This file is part of the Fauxjo Library.
+ * This file is part of the jextra.net software.
  *
- * The Fauxjo Library is free software; you can redistribute it and/or
+ * The jextra software is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * The Fauxjo Library is distributed in the hope that it will be useful,
+ * The jextra software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with the Fauxjo Library; if not, write to the Free
+ * License along with the jextra software; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
  * 02111-1307 USA.
  */
@@ -27,18 +27,20 @@ import java.util.*;
 import net.jextra.fauxjo.*;
 import net.jextra.fauxjo.bean.*;
 
-public class BeanDefCache {
+public class BeanDefCache
+{
     // ============================================================
     // Fields
     // ============================================================
 
-    private static HashMap<Class<?>,BeanDef> beanDefCache;
+    private static HashMap<Class<?>, BeanDef> beanDefCache;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    static {
+    static
+    {
         beanDefCache = new HashMap<>();
     }
 
@@ -50,24 +52,34 @@ public class BeanDefCache {
     // public
     // ----------
 
-    public static Map<String,FieldDef> getFieldDefs(Class<?> fauxjoClass) throws FauxjoException {
-        try {
-            BeanDef beanDef = getBeanDef(fauxjoClass);
+    public static Map<String, FieldDef> getFieldDefs( Class<?> fauxjoClass )
+        throws FauxjoException
+    {
+        try
+        {
+            BeanDef beanDef = getBeanDef( fauxjoClass );
 
             return beanDef.getFieldDefs();
-        } catch (Exception ex) {
-            if (ex instanceof FauxjoException) {
+        }
+        catch ( Exception ex )
+        {
+            if ( ex instanceof FauxjoException )
+            {
                 throw (FauxjoException) ex;
             }
 
-            throw new FauxjoException(ex);
+            throw new FauxjoException( ex );
         }
     }
 
-    public static BeanDef getBeanDef(Class<?> fauxjoClass) throws FauxjoException {
-        try {
-            BeanDef beanDef = beanDefCache.get(fauxjoClass);
-            if (beanDef != null) {
+    public static BeanDef getBeanDef( Class<?> fauxjoClass )
+        throws FauxjoException
+    {
+        try
+        {
+            BeanDef beanDef = beanDefCache.get( fauxjoClass );
+            if ( beanDef != null )
+            {
                 return beanDef;
             }
 
@@ -76,71 +88,84 @@ public class BeanDefCache {
             //
             beanDef = new BeanDef();
 
-            for (Field field : getFauxjoFields(fauxjoClass)) {
-                FauxjoField ann = field.getAnnotation(FauxjoField.class);
+            for ( Field field : getFauxjoFields( fauxjoClass ) )
+            {
+                FauxjoField ann = field.getAnnotation( FauxjoField.class );
                 String key = ann.value();
 
-                FieldDef fieldDef = beanDef.addField(key, field);
-                fieldDef.setDefaultable(ann.defaultable());
+                FieldDef fieldDef = beanDef.addField( key, field );
+                fieldDef.setDefaultable( ann.defaultable() );
 
                 //
                 // Check if FauxjoPrimaryKey.
                 //
-                if (field.isAnnotationPresent(FauxjoPrimaryKey.class)) {
-                    fieldDef.setPrimaryKey(true);
+                if ( field.isAnnotationPresent( FauxjoPrimaryKey.class ) )
+                {
+                    fieldDef.setPrimaryKey( true );
                 }
             }
 
-            BeanInfo info = Introspector.getBeanInfo(fauxjoClass);
-            for (PropertyDescriptor prop : info.getPropertyDescriptors()) {
-                if (prop.getWriteMethod() != null) {
-                    FauxjoSetter ann = prop.getWriteMethod().getAnnotation(FauxjoSetter.class);
-                    if (ann != null) {
+            BeanInfo info = Introspector.getBeanInfo( fauxjoClass );
+            for ( PropertyDescriptor prop : info.getPropertyDescriptors() )
+            {
+                if ( prop.getWriteMethod() != null )
+                {
+                    FauxjoSetter ann = prop.getWriteMethod().getAnnotation( FauxjoSetter.class );
+                    if ( ann != null )
+                    {
                         String key = ann.value();
 
-                        Field field = beanDef.getField(key);
-                        if (field != null) {
+                        Field field = beanDef.getField( key );
+                        if ( field != null )
+                        {
                             throw new FauxjoException(
-                                "FauxjoSetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]");
+                                "FauxjoSetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]" );
                         }
 
-                        beanDef.addWriteMethod(key, prop.getWriteMethod());
+                        beanDef.addWriteMethod( key, prop.getWriteMethod() );
                     }
                 }
 
-                if (prop.getReadMethod() != null) {
-                    FauxjoGetter ann = prop.getReadMethod().getAnnotation(FauxjoGetter.class);
-                    if (ann != null) {
+                if ( prop.getReadMethod() != null )
+                {
+                    FauxjoGetter ann = prop.getReadMethod().getAnnotation( FauxjoGetter.class );
+                    if ( ann != null )
+                    {
                         String key = ann.value();
 
-                        Field field = beanDef.getField(key);
-                        if (field != null) {
+                        Field field = beanDef.getField( key );
+                        if ( field != null )
+                        {
                             throw new FauxjoException(
-                                "FauxjoGetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]");
+                                "FauxjoGetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]" );
                         }
 
-                        beanDef.addReadMethod(key, prop.getReadMethod());
+                        beanDef.addReadMethod( key, prop.getReadMethod() );
 
                         //
                         // Check if FauxjoPrimaryKey.
                         //
-                        if (prop.getReadMethod().isAnnotationPresent(FauxjoPrimaryKey.class)) {
-                            beanDef.getFieldDef(key).setPrimaryKey(true);
+                        if ( prop.getReadMethod().isAnnotationPresent( FauxjoPrimaryKey.class ) )
+                        {
+                            beanDef.getFieldDef( key ).setPrimaryKey( true );
                         }
                     }
                 }
             }
 
             // Put in cacche
-            beanDefCache.put(fauxjoClass, beanDef);
+            beanDefCache.put( fauxjoClass, beanDef );
 
             return beanDef;
-        } catch (Exception ex) {
-            if (ex instanceof FauxjoException) {
+        }
+        catch ( Exception ex )
+        {
+            if ( ex instanceof FauxjoException )
+            {
                 throw (FauxjoException) ex;
             }
 
-            throw new FauxjoException(ex);
+            throw new FauxjoException( ex );
         }
     }
 
@@ -148,19 +173,23 @@ public class BeanDefCache {
     // private
     // ----------
 
-    private static Collection<Field> getFauxjoFields(Class<?> cls) {
+    private static Collection<Field> getFauxjoFields( Class<?> cls )
+    {
         ArrayList<Field> list = new ArrayList<Field>();
 
-        if (cls == null) {
+        if ( cls == null )
+        {
             return list;
         }
 
         // Add super-classes fields first.
-        list.addAll(getFauxjoFields(cls.getSuperclass()));
+        list.addAll( getFauxjoFields( cls.getSuperclass() ) );
 
-        for (Field field : cls.getDeclaredFields()) {
-            if (field.isAnnotationPresent(FauxjoField.class)) {
-                list.add(field);
+        for ( Field field : cls.getDeclaredFields() )
+        {
+            if ( field.isAnnotationPresent( FauxjoField.class ) )
+            {
+                list.add( field );
             }
         }
 

@@ -1,20 +1,20 @@
 /*
- * Copyright (C) fauxjo.net.
+ * Copyright (C) jextra.net.
  *
- * This file is part of the Fauxjo Library.
+ * This file is part of the jextra.net software.
  *
- * The Fauxjo Library is free software; you can redistribute it and/or
+ * The jextra software is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * The Fauxjo Library is distributed in the hope that it will be useful,
+ * The jextra software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with the Fauxjo Library; if not, write to the Free
+ * License along with the jextra software; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
  * 02111-1307 USA.
  */
@@ -23,37 +23,56 @@ package net.jextra.fauxjo;
 
 import java.sql.*;
 import java.util.*;
-import net.jextra.connectionsupplier.*;
 import net.jextra.fauxjo.bean.*;
 
 /**
- * Base implementation of a data access object that represents a table in the database.
+ * Base implementation of a data access object.
  */
-public class Home<T extends Fauxjo> {
+public class Home<T extends Fauxjo>
+{
     // ============================================================
     // Fields
     // ============================================================
 
-    private ConnectionSupplier cs;
+    private Connection conn;
     private Table<T> table;
     private BeanBuilder<T> beanBuilder;
+    private StatementCache statementCache;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public Home(ConnectionSupplier cs, String tableName, Class<T> beanClass) {
-        this.cs = cs;
-        table = new Table<>(tableName, beanClass);
-        beanBuilder = new BeanBuilder<>(beanClass);
-        beanBuilder.setAutoCloseResultSet(true);
+    public Home( String tableName, Class<T> beanClass )
+    {
+        table = new Table<>( tableName, beanClass );
+        beanBuilder = new BeanBuilder<>( beanClass );
+        beanBuilder.setAutoCloseResultSet( true );
     }
 
-    public Home(ConnectionSupplier cs, Table<T> table, BeanBuilder<T> beanBuilder) throws SQLException {
-        this.cs = cs;
+    public Home( Connection conn, String tableName, Class<T> beanClass )
+        throws SQLException
+    {
+        table = new Table<>( tableName, beanClass );
+        beanBuilder = new BeanBuilder<>( beanClass );
+        beanBuilder.setAutoCloseResultSet( true );
+        setConnection( conn );
+    }
+
+    public Home( Table<T> table, BeanBuilder<T> beanBuilder )
+    {
         this.table = table;
         this.beanBuilder = beanBuilder;
-        beanBuilder.setAutoCloseResultSet(true);
+        beanBuilder.setAutoCloseResultSet( true );
+    }
+
+    public Home( Connection conn, Table<T> table, BeanBuilder<T> beanBuilder )
+        throws SQLException
+    {
+        this.table = table;
+        this.beanBuilder = beanBuilder;
+        beanBuilder.setAutoCloseResultSet( true );
+        setConnection( conn );
     }
 
     // ============================================================
@@ -64,28 +83,64 @@ public class Home<T extends Fauxjo> {
     // public
     // ----------
 
-    public ConnectionSupplier getConnectionSupplier() {
-        return cs;
+    public Connection getConnection()
+    {
+        return conn;
     }
 
-    public Table getTable() {
+    public void setConnection( Connection conn )
+        throws SQLException
+    {
+        if ( statementCache != null )
+        {
+            statementCache.clear();
+            statementCache = null;
+        }
+
+        this.conn = conn;
+        table.setConnection( conn );
+        if ( conn != null )
+        {
+            if ( conn instanceof SureConnection )
+            {
+                statementCache = ( (SureConnection) conn ).getStatementCache();
+            }
+            else
+            {
+                statementCache = new StatementCache();
+            }
+        }
+    }
+
+    public Table getTable()
+    {
         return table;
     }
 
-    public BeanBuilder<T> getBeanBuilder() {
+    public BeanBuilder<T> getBeanBuilder()
+    {
         return beanBuilder;
     }
 
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return cs.prepareStatement(sql);
+    public PreparedStatement prepareStatement( String sql )
+        throws SQLException
+    {
+        return statementCache.prepareStatement( conn, sql );
     }
 
-    public String getSchemaName() {
+    public String getSchemaName()
+    {
         return table.getSchemaName();
     }
 
-    public String getTableName() {
+    public String getTableName()
+    {
         return table.getTableName();
+    }
+
+    public String getFullTableName()
+    {
+        return table.getFullTableName();
     }
 
     /**
@@ -93,63 +148,98 @@ public class Home<T extends Fauxjo> {
      *
      * @return String that represents the given short name.
      */
-    public String getQualifiedName(String name) {
-        if (table.getSchemaName() == null || table.getSchemaName().equals("")) {
+    public String getQualifiedName( String name )
+    {
+        if ( table.getSchemaName() == null || table.getSchemaName().equals( "" ) )
+        {
             return name;
-        } else {
+        }
+        else
+        {
             return table.getSchemaName() + "." + name;
         }
     }
 
-    public int insert(T bean) throws SQLException {
-        return table.insert(cs, bean);
+    public int insert( T bean )
+        throws SQLException
+    {
+        return table.insert( bean );
     }
 
-    public int update(T bean) throws SQLException {
-        return table.update(cs, bean);
+    public int insert( Collection<T> beans )
+        throws SQLException
+    {
+        return table.insert( beans );
     }
 
-    public boolean delete(T bean) throws SQLException {
-        return table.delete(cs, bean);
+    public int update( T bean )
+        throws SQLException
+    {
+        return table.update( bean );
     }
 
-    public String buildBasicSelect(String clause) {
-        return table.buildBasicSelectStatement(clause);
+    public boolean delete( T bean )
+        throws SQLException
+    {
+        return table.delete( bean );
     }
 
-    public T getFirst(ResultSet rs) throws SQLException {
-        return beanBuilder.getFirst(rs);
+    public String buildBasicSelect( String clause )
+    {
+        return table.buildBasicSelectStatement( clause );
     }
 
-    public T getFirst(ResultSet rs, boolean errorIfEmpty) throws SQLException {
-        return beanBuilder.getFirst(rs, errorIfEmpty);
+    public T getFirst( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getFirst( rs );
     }
 
-    public T getUnique(ResultSet rs) throws SQLException {
-        return beanBuilder.getUnique(rs);
+    public T getFirst( ResultSet rs, boolean errorIfEmpty )
+        throws SQLException
+    {
+        return beanBuilder.getFirst( rs, errorIfEmpty );
     }
 
-    public T getUnique(ResultSet rs, boolean errorIfEmpty) throws SQLException {
-        return beanBuilder.getUnique(rs, errorIfEmpty);
+    public T getUnique( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getUnique( rs );
     }
 
-    public List<T> getList(ResultSet rs) throws SQLException {
-        return beanBuilder.getList(rs);
+    public T getUnique( ResultSet rs, boolean errorIfEmpty )
+        throws SQLException
+    {
+        return beanBuilder.getUnique( rs, errorIfEmpty );
     }
 
-    public List<T> getList(ResultSet rs, int maxNumRows) throws SQLException {
-        return beanBuilder.getList(rs, maxNumRows);
+    public List<T> getList( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getList( rs );
     }
 
-    public Set<T> getSet(ResultSet rs) throws SQLException {
-        return beanBuilder.getSet(rs);
+    public List<T> getList( ResultSet rs, int maxNumRows )
+        throws SQLException
+    {
+        return beanBuilder.getList( rs, maxNumRows );
     }
 
-    public Set<T> getSet(ResultSet rs, int maxNumRows) throws SQLException {
-        return beanBuilder.getSet(rs, maxNumRows);
+    public Set<T> getSet( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getSet( rs );
     }
 
-    public ResultSetIterator<T> getIterator(ResultSet rs) throws SQLException {
-        return beanBuilder.getIterator(rs);
+    public Set<T> getSet( ResultSet rs, int maxNumRows )
+        throws SQLException
+    {
+        return beanBuilder.getSet( rs, maxNumRows );
+    }
+
+    public ResultSetIterator<T> getIterator( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getIterator( rs );
     }
 }

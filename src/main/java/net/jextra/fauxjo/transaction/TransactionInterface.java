@@ -19,13 +19,16 @@
  * 02111-1307 USA.
  */
 
-package net.jextra.fauxjo.coercer;
+package net.jextra.fauxjo.transaction;
 
+import java.io.*;
 import java.sql.*;
-import java.time.*;
-import net.jextra.fauxjo.*;
 
-public class DateCoercer implements TypeCoercer<Date>
+/**
+ * Skeletal definition of a database translation.
+ * It is Closeable in order to be used in an auto-closing try block.
+ */
+public interface TransactionInterface extends Closeable
 {
     // ============================================================
     // Methods
@@ -35,35 +38,24 @@ public class DateCoercer implements TypeCoercer<Date>
     // public
     // ----------
 
-    @Override
-    public Object convertTo( java.sql.Date value, Class<?> targetClass )
-        throws FauxjoException
-    {
-        if ( targetClass.equals( java.util.Date.class ) )
-        {
-            return new java.util.Date( value.getTime() );
-        }
-        else if ( targetClass.equals( Timestamp.class ) )
-        {
-            return new Timestamp( value.getTime() );
-        }
-        else if ( targetClass.equals( LocalDateTime.class ) )
-        {
-            return LocalDateTime.of( value.toLocalDate(), LocalTime.MIDNIGHT );
-        }
-        else if ( targetClass.equals( LocalDate.class ) )
-        {
-            return value.toLocalDate();
-        }
-        else if ( targetClass.equals( Instant.class ) )
-        {
-            return value.toInstant();
-        }
-        else if ( targetClass.equals( String.class ) )
-        {
-            return value.toInstant().toString();
-        }
+    Connection getConnection();
 
-        throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );
+    void rollback();
+
+    void commit();
+
+    default void finish( boolean commit )
+    {
+        if ( commit )
+        {
+            commit();
+        }
+        else
+        {
+            rollback();
+        }
     }
+
+    @Override
+    void close();
 }

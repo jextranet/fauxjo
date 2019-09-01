@@ -1,20 +1,20 @@
 /*
- * Copyright (C) fauxjo.net.
+ * Copyright (C) jextra.net.
  *
- * This file is part of the Fauxjo Library.
+ * This file is part of the jextra.net software.
  *
- * The Fauxjo Library is free software; you can redistribute it and/or
+ * The jextra software is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * The Fauxjo Library is distributed in the hope that it will be useful,
+ * The jextra software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with the Fauxjo Library; if not, write to the Free
+ * License along with the jextra software; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
  * 02111-1307 USA.
  */
@@ -29,7 +29,8 @@ import java.util.*;
  * Fauxjo bean. This is used primarily to iterate over a large number records without having to
  * load them all into memory.
  */
-public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
+public class ResultSetIterator<T> implements Iterator<T>, Iterable<T>
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -42,14 +43,18 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // Constructors
     // ============================================================
 
-    public ResultSetIterator(ResultSet resultSet, Builder<T> builder) throws SQLException {
+    public ResultSetIterator( ResultSet resultSet, Builder<T> builder )
+        throws SQLException
+    {
         this.builder = builder;
         this.resultSet = resultSet;
         hasNext = resultSet.next();
     }
 
-    public ResultSetIterator(ResultSet resultSet, Class<T> clzz) throws SQLException {
-        this.builder = new BeanBuilder<T>(clzz, true);
+    public ResultSetIterator( ResultSet resultSet, Class<T> clzz )
+        throws SQLException
+    {
+        this.builder = new BeanBuilder<T>( clzz, true );
         this.resultSet = resultSet;
         hasNext = resultSet.next();
     }
@@ -63,49 +68,64 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // ----------
 
     @Override
-    public boolean hasNext() {
+    public boolean hasNext()
+    {
         return hasNext;
     }
 
     @Override
-    public T next() {
-        if (!hasNext) {
+    public T next()
+    {
+        if ( !hasNext )
+        {
             return null;
         }
 
-        try {
-            T bean = builder.buildBean(resultSet);
+        try
+        {
+            T bean = builder.buildBean( resultSet );
             hasNext = resultSet.next();
-            if (!hasNext) {
+            if ( !hasNext )
+            {
                 close();
             }
 
             return bean;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        }
+        catch ( Exception ex )
+        {
+            throw new RuntimeException( ex );
         }
     }
 
     @Override
-    public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported for " + "ResultSetIterators.");
+    public void remove()
+    {
+        throw new UnsupportedOperationException( "Remove is not supported for " + "ResultSetIterators." );
     }
 
-    public void close() throws SQLException {
-        if (resultSet != null) {
+    public void close()
+        throws SQLException
+    {
+        if ( resultSet != null )
+        {
+            resultSet.getStatement().close();
             resultSet.close();
             resultSet = null;
         }
     }
 
     @Override
-    public void finalize() throws Throwable {
+    public void finalize()
+        throws Throwable
+    {
         close();
         super.finalize();
     }
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<T> iterator()
+    {
         return this;
     }
 
@@ -113,7 +133,9 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // Inner Classes
     // ============================================================
 
-    public interface Builder<T> {
-        T buildBean(ResultSet rs) throws SQLException;
+    public interface Builder<T>
+    {
+        T buildBean( ResultSet rs )
+            throws SQLException;
     }
 }

@@ -25,7 +25,7 @@ import java.sql.*;
 import java.time.*;
 import net.jextra.fauxjo.*;
 
-public class DateCoercer implements TypeCoercer<Date>
+public class InstantCoercer implements TypeCoercer<Instant>
 {
     // ============================================================
     // Methods
@@ -36,32 +36,20 @@ public class DateCoercer implements TypeCoercer<Date>
     // ----------
 
     @Override
-    public Object convertTo( java.sql.Date value, Class<?> targetClass )
+    public Object convertTo( Instant value, Class<?> targetClass )
         throws FauxjoException
     {
         if ( targetClass.equals( java.util.Date.class ) )
         {
-            return new java.util.Date( value.getTime() );
+            return java.util.Date.from( value );
+        }
+        else if ( targetClass.equals( Date.class ) )
+        {
+            return Date.from( value );
         }
         else if ( targetClass.equals( Timestamp.class ) )
         {
-            return new Timestamp( value.getTime() );
-        }
-        else if ( targetClass.equals( LocalDateTime.class ) )
-        {
-            return LocalDateTime.of( value.toLocalDate(), LocalTime.MIDNIGHT );
-        }
-        else if ( targetClass.equals( LocalDate.class ) )
-        {
-            return value.toLocalDate();
-        }
-        else if ( targetClass.equals( Instant.class ) )
-        {
-            return value.toInstant();
-        }
-        else if ( targetClass.equals( String.class ) )
-        {
-            return value.toInstant().toString();
+            return Timestamp.from( value );
         }
 
         throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );

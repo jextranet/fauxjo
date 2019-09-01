@@ -21,11 +21,10 @@
 
 package net.jextra.fauxjo.coercer;
 
-import java.sql.*;
-import java.time.*;
+import java.math.*;
 import net.jextra.fauxjo.*;
 
-public class DateCoercer implements TypeCoercer<Date>
+public class BigDecimalCoercer implements TypeCoercer<BigDecimal>
 {
     // ============================================================
     // Methods
@@ -36,32 +35,28 @@ public class DateCoercer implements TypeCoercer<Date>
     // ----------
 
     @Override
-    public Object convertTo( java.sql.Date value, Class<?> targetClass )
+    public Object convertTo( BigDecimal value, Class<?> targetClass )
         throws FauxjoException
     {
-        if ( targetClass.equals( java.util.Date.class ) )
+        if ( targetClass.equals( Byte.class ) )
         {
-            return new java.util.Date( value.getTime() );
+            return value.byteValue();
         }
-        else if ( targetClass.equals( Timestamp.class ) )
+        else if ( targetClass.equals( Short.class ) )
         {
-            return new Timestamp( value.getTime() );
+            return value.shortValue();
         }
-        else if ( targetClass.equals( LocalDateTime.class ) )
+        else if ( targetClass.equals( Integer.class ) )
         {
-            return LocalDateTime.of( value.toLocalDate(), LocalTime.MIDNIGHT );
+            return value.intValue();
         }
-        else if ( targetClass.equals( LocalDate.class ) )
+        else if ( targetClass.equals( Long.class ) )
         {
-            return value.toLocalDate();
+            return value.longValue();
         }
-        else if ( targetClass.equals( Instant.class ) )
+        else if ( targetClass.equals( BigInteger.class ) )
         {
-            return value.toInstant();
-        }
-        else if ( targetClass.equals( String.class ) )
-        {
-            return value.toInstant().toString();
+            return value.toBigInteger();
         }
 
         throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );

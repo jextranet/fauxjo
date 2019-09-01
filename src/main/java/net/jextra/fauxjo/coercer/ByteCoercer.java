@@ -1,20 +1,20 @@
 /*
- * Copyright (C) fauxjo.net.
+ * Copyright (C) jextra.net.
  *
- * This file is part of the Fauxjo Library.
+ * This file is part of the jextra.net software.
  *
- * The Fauxjo Library is free software; you can redistribute it and/or
+ * The jextra software is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * The Fauxjo Library is distributed in the hope that it will be useful,
+ * The jextra software is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with the Fauxjo Library; if not, write to the Free
+ * License along with the jextra software; if not, write to the Free
  * Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
  * 02111-1307 USA.
  */
@@ -23,7 +23,8 @@ package net.jextra.fauxjo.coercer;
 
 import net.jextra.fauxjo.*;
 
-public class ByteCoercer implements TypeCoercer<Byte> {
+public class ByteCoercer implements TypeCoercer<Byte>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -33,16 +34,23 @@ public class ByteCoercer implements TypeCoercer<Byte> {
     // ----------
 
     @Override
-    public Object coerce(Byte value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(Short.class)) {
+    public Object convertTo( Byte value, Class<?> targetClass )
+        throws FauxjoException
+    {
+        if ( targetClass.equals( Short.class ) )
+        {
             return value.shortValue();
-        } else if (destClass.equals(Integer.class)) {
+        }
+        else if ( targetClass.equals( Integer.class ) )
+        {
             return value.intValue();
-        } else if (destClass.equals(Long.class)) {
+        }
+        else if ( targetClass.equals( Long.class ) )
+        {
             return value.longValue();
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );
     }
 
 }

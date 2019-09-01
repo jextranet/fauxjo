@@ -19,30 +19,34 @@
  * 02111-1307 USA.
  */
 
-package net.jextra.fauxjo;
+package net.jextra.fauxjo.transaction;
 
 import java.sql.*;
 import java.util.*;
 
 /**
- * Groups a number of Home objects together into a common ConnectionSupplier.
+ * Multiple {@link TransactionInterface}s tied together. All should be committed and rolled back together.
  */
-public class HomeGroup
+public class MultiTransaction implements TransactionInterface
 {
     // ============================================================
     // Fields
     // ============================================================
 
-    private Map<Class<?>, Home<?>> homes;
-    private Connection conn;
+    private ArrayList<TransactionInterface> transactions;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public HomeGroup()
+    public MultiTransaction( Connection... connections )
     {
-        homes = new LinkedHashMap<>();
+        transactions = new ArrayList<>();
+
+        for ( Connection conn : connections )
+        {
+            transactions.add( new Transaction( conn ) );
+        }
     }
 
     // ============================================================
@@ -53,28 +57,61 @@ public class HomeGroup
     // public
     // ----------
 
-    public void addHome( Class<?> homeClass, Home<?> home )
+    @Override
+    public void finish( boolean commit )
     {
-        homes.put( homeClass, home );
+        if ( commit )
+        {
+            commit();
+        }
+        else
+        {
+            rollback();
+        }
     }
 
-    public <T> T getHome( Class<T> homeClass )
+    @Override
+    public void rollback()
     {
-        return homeClass.cast( homes.get( homeClass ) );
+        for ( TransactionInterface trans : transactions )
+        {
+            trans.rollback();
+        }
     }
 
+    @Override
+    public void commit()
+    {
+        for ( TransactionInterface trans : transactions )
+        {
+            trans.commit();
+        }
+    }
+
+    @Override
+    public void close()
+    {
+        for ( TransactionInterface trans : transactions )
+        {
+            trans.close();
+        }
+    }
+
+    public TransactionInterface getTransaction( int index )
+    {
+        return transactions.get( index );
+    }
+
+    @Override
     public Connection getConnection()
     {
-        return conn;
+        return getConnection( 0 );
     }
 
-    public void setConnection( Connection conn )
-        throws SQLException
+    public Connection getConnection( int index )
     {
-        this.conn = conn;
-        for ( Home<?> home : homes.values() )
-        {
-            home.setConnection( conn );
-        }
+        TransactionInterface trans = getTransaction( index );
+
+        return trans == null ? null : trans.getConnection();
     }
 }

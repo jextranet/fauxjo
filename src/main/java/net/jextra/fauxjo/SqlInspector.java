@@ -21,29 +21,15 @@
 
 package net.jextra.fauxjo;
 
-import java.sql.*;
-import java.util.*;
+import java.util.regex.*;
 
-/**
- * Groups a number of Home objects together into a common ConnectionSupplier.
- */
-public class HomeGroup
+final class SqlInspector
 {
     // ============================================================
     // Fields
     // ============================================================
 
-    private Map<Class<?>, Home<?>> homes;
-    private Connection conn;
-
-    // ============================================================
-    // Constructors
-    // ============================================================
-
-    public HomeGroup()
-    {
-        homes = new LinkedHashMap<>();
-    }
+    private static final Pattern INSERT_PATTERN = Pattern.compile( "insert\\sinto", Pattern.CASE_INSENSITIVE );
 
     // ============================================================
     // Methods
@@ -53,28 +39,8 @@ public class HomeGroup
     // public
     // ----------
 
-    public void addHome( Class<?> homeClass, Home<?> home )
+    public static boolean isInsertStatement( String sql )
     {
-        homes.put( homeClass, home );
-    }
-
-    public <T> T getHome( Class<T> homeClass )
-    {
-        return homeClass.cast( homes.get( homeClass ) );
-    }
-
-    public Connection getConnection()
-    {
-        return conn;
-    }
-
-    public void setConnection( Connection conn )
-        throws SQLException
-    {
-        this.conn = conn;
-        for ( Home<?> home : homes.values() )
-        {
-            home.setConnection( conn );
-        }
+        return INSERT_PATTERN.matcher( sql ).find();
     }
 }

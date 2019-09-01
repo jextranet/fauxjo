@@ -19,32 +19,15 @@
  * 02111-1307 USA.
  */
 
-package net.jextra.fauxjo;
+package net.jextra.fauxjo.transaction;
 
 import java.sql.*;
-import java.util.*;
 
 /**
- * Groups a number of Home objects together into a common ConnectionSupplier.
+ * A "transaction" to literally do nothing. This is good for testing purposes where you do not really want to wrap something in a transaction.
  */
-public class HomeGroup
+public class DummyTransaction implements TransactionInterface
 {
-    // ============================================================
-    // Fields
-    // ============================================================
-
-    private Map<Class<?>, Home<?>> homes;
-    private Connection conn;
-
-    // ============================================================
-    // Constructors
-    // ============================================================
-
-    public HomeGroup()
-    {
-        homes = new LinkedHashMap<>();
-    }
-
     // ============================================================
     // Methods
     // ============================================================
@@ -53,28 +36,27 @@ public class HomeGroup
     // public
     // ----------
 
-    public void addHome( Class<?> homeClass, Home<?> home )
+    @Override
+    public void rollback()
     {
-        homes.put( homeClass, home );
+        // Do nothing.
     }
 
-    public <T> T getHome( Class<T> homeClass )
+    @Override
+    public void commit()
     {
-        return homeClass.cast( homes.get( homeClass ) );
+        // Do nothing.
     }
 
+    @Override
+    public void close()
+    {
+        // Do nothing.
+    }
+
+    @Override
     public Connection getConnection()
     {
-        return conn;
-    }
-
-    public void setConnection( Connection conn )
-        throws SQLException
-    {
-        this.conn = conn;
-        for ( Home<?> home : homes.values() )
-        {
-            home.setConnection( conn );
-        }
+        return null;
     }
 }
