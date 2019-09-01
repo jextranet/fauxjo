@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-
-<nubbin name="fauxjo">
-
-    <file name="fauxjo.jar"/>
-
-    <dependency name="postgresql-jdbc" version="*"/>
-
-</nubbin>
