@@ -101,14 +101,7 @@ public class Home<T extends Fauxjo>
         table.setConnection( conn );
         if ( conn != null )
         {
-            if ( conn instanceof SureConnection )
-            {
-                statementCache = ( (SureConnection) conn ).getStatementCache();
-            }
-            else
-            {
-                statementCache = new StatementCache();
-            }
+            statementCache = new StatementCache();
         }
     }
 

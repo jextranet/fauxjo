@@ -98,14 +98,7 @@ public class Table<T>
         this.conn = conn;
         if ( conn != null )
         {
-            if ( conn instanceof SureConnection )
-            {
-                statementCache = ( (SureConnection) conn ).getStatementCache();
-            }
-            else
-            {
-                statementCache = new StatementCache();
-            }
+            statementCache = new StatementCache();
         }
     }
 
