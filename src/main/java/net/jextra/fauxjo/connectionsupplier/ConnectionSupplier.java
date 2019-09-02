@@ -26,7 +26,7 @@ package net.jextra.fauxjo.connectionsupplier;
 import java.sql.*;
 
 /**
- * Recommended to be used to pass to {@link FauxjoSchema}'s instead of passing Connection directly. This is so
+ * Recommended to be used to pass to Schema's instead of passing Connection directly. This is so
  * that the connections can be managed external from fauxjo in a context appropriate manner. An example of this
  * is for connection caches in web-sites.
  */

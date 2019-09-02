@@ -167,11 +167,6 @@ public abstract class FauxjoImpl implements Fauxjo
         }
     }
 
-    /**
-     * @return true if object is already in the database. The default behavior is to return the inverse value of
-     *         {@link #hasEmptyPrimaryKey(Fauxjo)}. This should be overridden if that is not accurate for this Fauxjo
-     *         bean.
-     */
     @Override
     public boolean isInDatabase()
         throws FauxjoException

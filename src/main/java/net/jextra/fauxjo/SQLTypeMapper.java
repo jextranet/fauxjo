@@ -27,7 +27,7 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * Mapping between SQL type and Java type. It is intended to go from SQL type -> Java type.
+ * Mapping between SQL type and Java type. It is intended to go from SQL type to Java type.
  */
 public class SQLTypeMapper extends HashMap<Integer, Class<?>>
 {
