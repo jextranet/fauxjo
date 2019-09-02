@@ -37,6 +37,7 @@ public class StringCoercer implements TypeCoercer<String>
     // ----------
 
     @Override
+    @SuppressWarnings( "unchecked" )
     public Object coerce( String value, Class<?> destClass )
         throws FauxjoException
     {
