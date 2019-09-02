@@ -136,7 +136,6 @@ public class FieldDef
         return primaryKeySequenceName;
     }
 
-    @Deprecated
     public void setPrimaryKeySequenceName( String primaryKeySequenceName )
     {
         this.primaryKeySequenceName = primaryKeySequenceName;
