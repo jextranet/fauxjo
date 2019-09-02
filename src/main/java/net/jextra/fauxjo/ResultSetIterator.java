@@ -116,14 +116,6 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T>
     }
 
     @Override
-    public void finalize()
-        throws Throwable
-    {
-        close();
-        super.finalize();
-    }
-
-    @Override
     public Iterator<T> iterator()
     {
         return this;

@@ -24,7 +24,7 @@ package net.jextra.fauxjo.coercer;
 import java.util.*;
 import net.jextra.fauxjo.*;
 
-public class UUIDCoercer implements TypeCoercer<UUID>
+public class UuidCoercer implements TypeCoercer<UUID>
 {
     // ============================================================
     // Methods

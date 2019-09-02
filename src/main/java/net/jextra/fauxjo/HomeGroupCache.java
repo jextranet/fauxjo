@@ -69,7 +69,7 @@ public class HomeGroupCache<T extends HomeGroup>
         {
             try
             {
-                homeGroup = clazz.newInstance();
+                homeGroup = clazz.getDeclaredConstructor().newInstance();
                 instances.put( instanceName, homeGroup );
             }
             catch ( Exception e )

@@ -140,11 +140,11 @@ public class Table<T>
         throws SQLException
     {
         InsertDef insertDef = getInsertDef( bean );
-        PreparedStatement statement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
+        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
 
-        setInsertValues( insertDef, 1, bean );
-        int rows = statement.executeUpdate();
-        retrieveGeneratedKeys( insertDef, bean );
+        setInsertValues( insStatement, insertDef, 1, bean );
+        int rows = insStatement.executeUpdate();
+        retrieveGeneratedKeys( insStatement, insertDef, bean );
 
         return rows;
     }
@@ -157,15 +157,15 @@ public class Table<T>
     {
         InsertDef insertDef = getInsertDef( null );
         insertDef.setRowCount( beans.size() );
-        PreparedStatement statement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
+        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
 
         int paramIndex = 1;
         for ( T bean : beans )
         {
-            paramIndex = setInsertValues( insertDef, paramIndex, bean );
+            paramIndex = setInsertValues( insStatement, insertDef, paramIndex, bean );
         }
 
-        int rows = statement.executeUpdate();
+        int rows = insStatement.executeUpdate();
         // TODO -- not sure how to deal with generated keys in a multi-insert
         //        retrieveGeneratedKeys( insertDef, bean );
 
@@ -437,7 +437,7 @@ public class Table<T>
         return new InsertDef( insertSql, valuesSql, generatedColumns );
     }
 
-    protected int setInsertValues( InsertDef insertDef, int paramIndex, T bean )
+    protected int setInsertValues( PreparedStatement insStatement, InsertDef insertDef, int paramIndex, T bean )
         throws SQLException
     {
         Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( bean.getClass() );
@@ -462,12 +462,12 @@ public class Table<T>
 
             if ( val == null )
             {
-                insertDef.getStatement().setNull( paramIndex, sqlType );
+                insStatement.setNull( paramIndex, sqlType );
             }
             else
             {
                 Object coercedValue = coercer.convertTo( val, SqlTypeMapping.getJavaClass( sqlType ) );
-                insertDef.getStatement().setObject( paramIndex, coercedValue, sqlType );
+                insStatement.setObject( paramIndex, coercedValue, sqlType );
 
                 /*if ( sqlType == Types.ARRAY )
                 {
@@ -492,7 +492,7 @@ public class Table<T>
         return paramIndex;
     }
 
-    protected void retrieveGeneratedKeys( InsertDef insertDef, T bean )
+    protected void retrieveGeneratedKeys( PreparedStatement insStatement, InsertDef insertDef, T bean )
         throws SQLException
     {
         if ( insertDef.getGeneratedKeys().isEmpty() )
@@ -500,7 +500,7 @@ public class Table<T>
             return;
         }
 
-        ResultSet rs = insertDef.getStatement().getGeneratedKeys();
+        ResultSet rs = insStatement.getGeneratedKeys();
         if ( rs.next() )
         {
             Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( bean.getClass() );
@@ -791,7 +791,6 @@ public class Table<T>
         private String valuesPart;
         // Number of questionmark sets to add to statement.
         private int rowCount;
-        private PreparedStatement statement;
         private Collection<String> generatedKeys;
 
         public InsertDef( String insertPart, String valuesPart, Collection<String> generatedKeys )
@@ -835,17 +834,6 @@ public class Table<T>
         public String getInsertSql()
         {
             return toString();
-        }
-
-        public Connection getConnection()
-            throws SQLException
-        {
-            return statement.getConnection();
-        }
-
-        public PreparedStatement getStatement()
-        {
-            return statement;
         }
 
         public Collection<String> getGeneratedKeys()

@@ -270,7 +270,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
 
         try
         {
-            bean = beanClass.newInstance();
+            bean = beanClass.getDeclaredConstructor().newInstance();
         }
         catch ( Exception ex )
         {
