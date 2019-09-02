@@ -28,19 +28,21 @@ import net.jextra.connectionsupplier.*;
 /**
  * An object to group a number of Home objects together to a common ConnectionSupplier.
  */
-public class HomeGroup implements ConnectionSupplier {
+public class HomeGroup implements ConnectionSupplier
+{
     // ============================================================
     // Fields
     // ============================================================
 
-    private HashMap<Class<?>,Home<?>> homes;
+    private HashMap<Class<?>, Home<?>> homes;
     private ConnectionSupplier cs;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public HomeGroup() {
+    public HomeGroup()
+    {
         homes = new HashMap<>();
     }
 
@@ -53,56 +55,70 @@ public class HomeGroup implements ConnectionSupplier {
     // ----------
 
     @Override
-    public Connection getConnection() throws SQLException {
+    public Connection getConnection()
+        throws SQLException
+    {
         validateConnectionSupplier();
 
         return cs.getConnection();
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
+    public PreparedStatement prepareStatement( String sql )
+        throws SQLException
+    {
         validateConnectionSupplier();
 
-        return cs.prepareStatement(sql);
+        return cs.prepareStatement( sql );
     }
 
     @Override
-    public PreparedStatement prepareCall(String sql) throws SQLException {
+    public PreparedStatement prepareCall( String sql )
+        throws SQLException
+    {
         validateConnectionSupplier();
 
-        return cs.prepareCall(sql);
+        return cs.prepareCall( sql );
     }
 
     @Override
-    public boolean close() throws SQLException {
+    public boolean close()
+        throws SQLException
+    {
         validateConnectionSupplier();
 
         return cs.close();
     }
 
-    public ConnectionSupplier getConnectionSupplier() {
+    public ConnectionSupplier getConnectionSupplier()
+    {
         return cs;
     }
 
-    public void setConnectionSupplier(ConnectionSupplier cs) {
+    public void setConnectionSupplier( ConnectionSupplier cs )
+    {
         this.cs = cs;
     }
 
-    public void addHome(Class<?> homeClass, Home<?> home) {
-        homes.put(homeClass, home);
+    public void addHome( Class<?> homeClass, Home<?> home )
+    {
+        homes.put( homeClass, home );
     }
 
-    public <T> T getHome(Class<T> homeClass) {
-        return homeClass.cast(homes.get(homeClass));
+    public <T> T getHome( Class<T> homeClass )
+    {
+        return homeClass.cast( homes.get( homeClass ) );
     }
 
     // ----------
     // private
     // ----------
 
-    private void validateConnectionSupplier() {
-        if (cs == null) {
-            throw new RuntimeException("The ConnectionSupplier for a Module must be set before it is used");
+    private void validateConnectionSupplier()
+    {
+        if ( cs == null )
+        {
+            throw new RuntimeException( "The ConnectionSupplier for a Module must be set before it is used" );
         }
     }
 }

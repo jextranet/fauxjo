@@ -31,9 +31,10 @@ import java.lang.annotation.*;
  * standard name getXYZ (or isXYZ) where XYZ is the name of the column in the
  * database (case insensitive).
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface FauxjoGetter {
+@Retention( RetentionPolicy.RUNTIME )
+@Target( ElementType.METHOD )
+public @interface FauxjoGetter
+{
     // Column in the database for insert,update statements.
     String value();
 }

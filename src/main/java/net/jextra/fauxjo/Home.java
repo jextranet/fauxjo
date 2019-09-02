@@ -29,7 +29,8 @@ import net.jextra.fauxjo.bean.*;
 /**
  * Base implementation of a data access object that represents a table in the database.
  */
-public class Home<T extends Fauxjo> {
+public class Home<T extends Fauxjo>
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -42,18 +43,21 @@ public class Home<T extends Fauxjo> {
     // Constructors
     // ============================================================
 
-    public Home(ConnectionSupplier cs, String tableName, Class<T> beanClass) {
+    public Home( ConnectionSupplier cs, String tableName, Class<T> beanClass )
+    {
         this.cs = cs;
-        table = new Table<>(tableName, beanClass);
-        beanBuilder = new BeanBuilder<>(beanClass);
-        beanBuilder.setAutoCloseResultSet(true);
+        table = new Table<>( tableName, beanClass );
+        beanBuilder = new BeanBuilder<>( beanClass );
+        beanBuilder.setAutoCloseResultSet( true );
     }
 
-    public Home(ConnectionSupplier cs, Table<T> table, BeanBuilder<T> beanBuilder) throws SQLException {
+    public Home( ConnectionSupplier cs, Table<T> table, BeanBuilder<T> beanBuilder )
+        throws SQLException
+    {
         this.cs = cs;
         this.table = table;
         this.beanBuilder = beanBuilder;
-        beanBuilder.setAutoCloseResultSet(true);
+        beanBuilder.setAutoCloseResultSet( true );
     }
 
     // ============================================================
@@ -64,27 +68,34 @@ public class Home<T extends Fauxjo> {
     // public
     // ----------
 
-    public ConnectionSupplier getConnectionSupplier() {
+    public ConnectionSupplier getConnectionSupplier()
+    {
         return cs;
     }
 
-    public Table getTable() {
+    public Table getTable()
+    {
         return table;
     }
 
-    public BeanBuilder<T> getBeanBuilder() {
+    public BeanBuilder<T> getBeanBuilder()
+    {
         return beanBuilder;
     }
 
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return cs.prepareStatement(sql);
+    public PreparedStatement prepareStatement( String sql )
+        throws SQLException
+    {
+        return cs.prepareStatement( sql );
     }
 
-    public String getSchemaName() {
+    public String getSchemaName()
+    {
         return table.getSchemaName();
     }
 
-    public String getTableName() {
+    public String getTableName()
+    {
         return table.getTableName();
     }
 
@@ -93,63 +104,92 @@ public class Home<T extends Fauxjo> {
      *
      * @return String that represents the given short name.
      */
-    public String getQualifiedName(String name) {
-        if (table.getSchemaName() == null || table.getSchemaName().equals("")) {
+    public String getQualifiedName( String name )
+    {
+        if ( table.getSchemaName() == null || table.getSchemaName().equals( "" ) )
+        {
             return name;
-        } else {
+        }
+        else
+        {
             return table.getSchemaName() + "." + name;
         }
     }
 
-    public int insert(T bean) throws SQLException {
-        return table.insert(cs, bean);
+    public int insert( T bean )
+        throws SQLException
+    {
+        return table.insert( cs, bean );
     }
 
-    public int update(T bean) throws SQLException {
-        return table.update(cs, bean);
+    public int update( T bean )
+        throws SQLException
+    {
+        return table.update( cs, bean );
     }
 
-    public boolean delete(T bean) throws SQLException {
-        return table.delete(cs, bean);
+    public boolean delete( T bean )
+        throws SQLException
+    {
+        return table.delete( cs, bean );
     }
 
-    public String buildBasicSelect(String clause) {
-        return table.buildBasicSelectStatement(clause);
+    public String buildBasicSelect( String clause )
+    {
+        return table.buildBasicSelectStatement( clause );
     }
 
-    public T getFirst(ResultSet rs) throws SQLException {
-        return beanBuilder.getFirst(rs);
+    public T getFirst( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getFirst( rs );
     }
 
-    public T getFirst(ResultSet rs, boolean errorIfEmpty) throws SQLException {
-        return beanBuilder.getFirst(rs, errorIfEmpty);
+    public T getFirst( ResultSet rs, boolean errorIfEmpty )
+        throws SQLException
+    {
+        return beanBuilder.getFirst( rs, errorIfEmpty );
     }
 
-    public T getUnique(ResultSet rs) throws SQLException {
-        return beanBuilder.getUnique(rs);
+    public T getUnique( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getUnique( rs );
     }
 
-    public T getUnique(ResultSet rs, boolean errorIfEmpty) throws SQLException {
-        return beanBuilder.getUnique(rs, errorIfEmpty);
+    public T getUnique( ResultSet rs, boolean errorIfEmpty )
+        throws SQLException
+    {
+        return beanBuilder.getUnique( rs, errorIfEmpty );
     }
 
-    public List<T> getList(ResultSet rs) throws SQLException {
-        return beanBuilder.getList(rs);
+    public List<T> getList( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getList( rs );
     }
 
-    public List<T> getList(ResultSet rs, int maxNumRows) throws SQLException {
-        return beanBuilder.getList(rs, maxNumRows);
+    public List<T> getList( ResultSet rs, int maxNumRows )
+        throws SQLException
+    {
+        return beanBuilder.getList( rs, maxNumRows );
     }
 
-    public Set<T> getSet(ResultSet rs) throws SQLException {
-        return beanBuilder.getSet(rs);
+    public Set<T> getSet( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getSet( rs );
     }
 
-    public Set<T> getSet(ResultSet rs, int maxNumRows) throws SQLException {
-        return beanBuilder.getSet(rs, maxNumRows);
+    public Set<T> getSet( ResultSet rs, int maxNumRows )
+        throws SQLException
+    {
+        return beanBuilder.getSet( rs, maxNumRows );
     }
 
-    public ResultSetIterator<T> getIterator(ResultSet rs) throws SQLException {
-        return beanBuilder.getIterator(rs);
+    public ResultSetIterator<T> getIterator( ResultSet rs )
+        throws SQLException
+    {
+        return beanBuilder.getIterator( rs );
     }
 }

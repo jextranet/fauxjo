@@ -30,9 +30,10 @@ import java.lang.annotation.*;
  * By default, the {@link net.jextra.fauxjo.Home} object locates the 'set' method by searching for a method with the
  * standard name setXYZ where XYZ is the name of the column in the database (case insensitive).
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface FauxjoSetter {
+@Retention( RetentionPolicy.RUNTIME )
+@Target( ElementType.METHOD )
+public @interface FauxjoSetter
+{
     // Column in the database from select statement.
     String value();
 }

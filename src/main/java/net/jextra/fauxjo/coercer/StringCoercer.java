@@ -24,7 +24,8 @@ package net.jextra.fauxjo.coercer;
 import java.sql.*;
 import net.jextra.fauxjo.*;
 
-public class StringCoercer implements TypeCoercer<String> {
+public class StringCoercer implements TypeCoercer<String>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -34,32 +35,51 @@ public class StringCoercer implements TypeCoercer<String> {
     // ----------
 
     @Override
-    public Object coerce(String value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(Boolean.class)) {
-            return Boolean.parseBoolean(value);
-        } else if (destClass.equals(Integer.class)) {
-            return Integer.parseInt(value);
-        } else if (destClass.equals(Long.class)) {
-            return Long.parseLong(value);
-        } else if (destClass.equals(Float.class)) {
-            return Float.parseFloat(value);
-        } else if (destClass.equals(Double.class)) {
-            return Double.parseDouble(value);
-        } else if (destClass.equals(java.sql.Date.class)) {
-            return java.sql.Date.valueOf(value);
-        } else if (destClass.equals(Timestamp.class)) {
-            return Timestamp.valueOf(value);
-        } else if (destClass.isEnum()) {
-            @SuppressWarnings("unchecked")
+    public Object coerce( String value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( Boolean.class ) )
+        {
+            return Boolean.parseBoolean( value );
+        }
+        else if ( destClass.equals( Integer.class ) )
+        {
+            return Integer.parseInt( value );
+        }
+        else if ( destClass.equals( Long.class ) )
+        {
+            return Long.parseLong( value );
+        }
+        else if ( destClass.equals( Float.class ) )
+        {
+            return Float.parseFloat( value );
+        }
+        else if ( destClass.equals( Double.class ) )
+        {
+            return Double.parseDouble( value );
+        }
+        else if ( destClass.equals( java.sql.Date.class ) )
+        {
+            return java.sql.Date.valueOf( value );
+        }
+        else if ( destClass.equals( Timestamp.class ) )
+        {
+            return Timestamp.valueOf( value );
+        }
+        else if ( destClass.isEnum() )
+        {
+            @SuppressWarnings( "unchecked" )
             Class<? extends Enum> clss = (Class<? extends Enum>) destClass;
-            @SuppressWarnings("unchecked")
-            Object obj = Enum.valueOf(clss, value);
+            @SuppressWarnings( "unchecked" )
+            Object obj = Enum.valueOf( clss, value );
 
             return obj;
-        } else if (destClass.equals(Object.class)) {
+        }
+        else if ( destClass.equals( Object.class ) )
+        {
             return value;
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 }

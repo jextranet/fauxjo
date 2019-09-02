@@ -24,7 +24,8 @@ package net.jextra.fauxjo.coercer;
 import java.util.*;
 import net.jextra.fauxjo.*;
 
-public class UUIDCoercer implements TypeCoercer<UUID> {
+public class UUIDCoercer implements TypeCoercer<UUID>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -34,14 +35,19 @@ public class UUIDCoercer implements TypeCoercer<UUID> {
     // ----------
 
     @Override
-    public Object coerce(UUID value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(String.class)) {
+    public Object coerce( UUID value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( String.class ) )
+        {
             return value.toString();
-        } else if (destClass.equals(Object.class)) {
+        }
+        else if ( destClass.equals( Object.class ) )
+        {
             return value;
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 
 }

@@ -23,12 +23,17 @@ package net.jextra.connectionsupplier;
 
 import java.sql.*;
 
-public interface ConnectionSupplier {
-    Connection getConnection() throws SQLException;
+public interface ConnectionSupplier
+{
+    Connection getConnection()
+        throws SQLException;
 
-    PreparedStatement prepareStatement(String sql) throws SQLException;
+    PreparedStatement prepareStatement( String sql )
+        throws SQLException;
 
-    PreparedStatement prepareCall(String sql) throws SQLException;
+    PreparedStatement prepareCall( String sql )
+        throws SQLException;
 
-    boolean close() throws SQLException;
+    boolean close()
+        throws SQLException;
 }

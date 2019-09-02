@@ -27,7 +27,8 @@ import javax.sql.*;
 /**
  * Same as {@link PrincipalConnectionSupplier} except that there is a different {@link DataSource} for each {@link Thread}.
  */
-public class IsolatedThreadsConnectionSupplier extends PrincipalConnectionSupplier {
+public class IsolatedThreadsConnectionSupplier extends PrincipalConnectionSupplier
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -38,12 +39,15 @@ public class IsolatedThreadsConnectionSupplier extends PrincipalConnectionSuppli
     // Constructors
     // ============================================================
 
-    public IsolatedThreadsConnectionSupplier() {
+    public IsolatedThreadsConnectionSupplier()
+    {
         dataSourceLocal = new ThreadLocal<>();
     }
 
-    public IsolatedThreadsConnectionSupplier(DataSource ds) throws SQLException {
-        super(ds);
+    public IsolatedThreadsConnectionSupplier( DataSource ds )
+        throws SQLException
+    {
+        super( ds );
     }
 
     // ============================================================
@@ -54,22 +58,27 @@ public class IsolatedThreadsConnectionSupplier extends PrincipalConnectionSuppli
     // public
     // ----------
 
-    public DataSource getDataSource() {
-        if (dataSourceLocal == null) {
+    public DataSource getDataSource()
+    {
+        if ( dataSourceLocal == null )
+        {
             dataSourceLocal = new ThreadLocal<>();
         }
 
         return dataSourceLocal.get();
     }
 
-    public void setDataSource(DataSource ds) throws SQLException {
+    public void setDataSource( DataSource ds )
+        throws SQLException
+    {
         // Make sure to clear all of the cached information because if the DataSource changes it call all be wrong.
         close();
 
-        if (dataSourceLocal == null) {
+        if ( dataSourceLocal == null )
+        {
             dataSourceLocal = new ThreadLocal<>();
         }
 
-        dataSourceLocal.set(ds);
+        dataSourceLocal.set( ds );
     }
 }

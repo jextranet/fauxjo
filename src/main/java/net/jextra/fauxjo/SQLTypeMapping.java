@@ -27,7 +27,8 @@ import java.util.*;
 /**
  * Mapping between all SQL types and a Java type. It is intended to be used one-directional from SQL type -&gt; Java type.
  */
-public class SQLTypeMapping extends HashMap<Integer,Class<?>> {
+public class SQLTypeMapping extends HashMap<Integer, Class<?>>
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -38,46 +39,47 @@ public class SQLTypeMapping extends HashMap<Integer,Class<?>> {
     // Constructors
     // ============================================================
 
-    private SQLTypeMapping() {
-        put(java.sql.Types.BOOLEAN, Boolean.class);
-        put(java.sql.Types.BIT, Boolean.class);
-        put(java.sql.Types.SMALLINT, Short.class);
-        put(java.sql.Types.TINYINT, Short.class);
-        put(java.sql.Types.INTEGER, Integer.class);
-        put(java.sql.Types.BIGINT, Long.class);
-        put(java.sql.Types.FLOAT, Float.class);
-        put(java.sql.Types.DECIMAL, Double.class);
-        put(java.sql.Types.DOUBLE, Double.class);
-        put(java.sql.Types.NUMERIC, Double.class);
-        put(java.sql.Types.REAL, Double.class);
-        put(java.sql.Types.NVARCHAR, String.class);
-        put(java.sql.Types.CHAR, String.class);
-        put(java.sql.Types.CLOB, String.class);
-        put(java.sql.Types.BINARY, String.class);
-        put(java.sql.Types.LONGNVARCHAR, String.class);
-        put(java.sql.Types.LONGVARBINARY, String.class);
-        put(java.sql.Types.LONGVARCHAR, String.class);
-        put(java.sql.Types.NCHAR, String.class);
-        put(java.sql.Types.NCLOB, String.class);
-        put(java.sql.Types.SQLXML, String.class);
-        put(java.sql.Types.VARBINARY, String.class);
-        put(java.sql.Types.VARCHAR, String.class);
-        put(java.sql.Types.TIME, Time.class);
-        put(java.sql.Types.TIME_WITH_TIMEZONE, Time.class);
-        put(java.sql.Types.TIMESTAMP, Timestamp.class);
-        put(java.sql.Types.TIMESTAMP_WITH_TIMEZONE, Timestamp.class);
-        put(java.sql.Types.DATE, java.sql.Date.class);
-        put(java.sql.Types.BLOB, Object.class);
-        put(java.sql.Types.DATALINK, Object.class);
-        put(java.sql.Types.DISTINCT, Object.class);
-        put(java.sql.Types.JAVA_OBJECT, Object.class);
-        put(java.sql.Types.NULL, Object.class);
-        put(java.sql.Types.REF, Object.class);
-        put(java.sql.Types.ROWID, Object.class);
-        put(java.sql.Types.STRUCT, Object.class);
-        put(java.sql.Types.OTHER, Object.class);
-        put(java.sql.Types.REF_CURSOR, Object.class);
-        put(java.sql.Types.ARRAY, Object[].class);
+    private SQLTypeMapping()
+    {
+        put( java.sql.Types.BOOLEAN, Boolean.class );
+        put( java.sql.Types.BIT, Boolean.class );
+        put( java.sql.Types.SMALLINT, Short.class );
+        put( java.sql.Types.TINYINT, Short.class );
+        put( java.sql.Types.INTEGER, Integer.class );
+        put( java.sql.Types.BIGINT, Long.class );
+        put( java.sql.Types.FLOAT, Float.class );
+        put( java.sql.Types.DECIMAL, Double.class );
+        put( java.sql.Types.DOUBLE, Double.class );
+        put( java.sql.Types.NUMERIC, Double.class );
+        put( java.sql.Types.REAL, Double.class );
+        put( java.sql.Types.NVARCHAR, String.class );
+        put( java.sql.Types.CHAR, String.class );
+        put( java.sql.Types.CLOB, String.class );
+        put( java.sql.Types.BINARY, String.class );
+        put( java.sql.Types.LONGNVARCHAR, String.class );
+        put( java.sql.Types.LONGVARBINARY, String.class );
+        put( java.sql.Types.LONGVARCHAR, String.class );
+        put( java.sql.Types.NCHAR, String.class );
+        put( java.sql.Types.NCLOB, String.class );
+        put( java.sql.Types.SQLXML, String.class );
+        put( java.sql.Types.VARBINARY, String.class );
+        put( java.sql.Types.VARCHAR, String.class );
+        put( java.sql.Types.TIME, Time.class );
+        put( java.sql.Types.TIME_WITH_TIMEZONE, Time.class );
+        put( java.sql.Types.TIMESTAMP, Timestamp.class );
+        put( java.sql.Types.TIMESTAMP_WITH_TIMEZONE, Timestamp.class );
+        put( java.sql.Types.DATE, java.sql.Date.class );
+        put( java.sql.Types.BLOB, Object.class );
+        put( java.sql.Types.DATALINK, Object.class );
+        put( java.sql.Types.DISTINCT, Object.class );
+        put( java.sql.Types.JAVA_OBJECT, Object.class );
+        put( java.sql.Types.NULL, Object.class );
+        put( java.sql.Types.REF, Object.class );
+        put( java.sql.Types.ROWID, Object.class );
+        put( java.sql.Types.STRUCT, Object.class );
+        put( java.sql.Types.OTHER, Object.class );
+        put( java.sql.Types.REF_CURSOR, Object.class );
+        put( java.sql.Types.ARRAY, Object[].class );
     }
 
     // ============================================================
@@ -88,15 +90,18 @@ public class SQLTypeMapping extends HashMap<Integer,Class<?>> {
     // public
     // ----------
 
-    public static SQLTypeMapping getInstance() {
-        if (instance == null) {
+    public static SQLTypeMapping getInstance()
+    {
+        if ( instance == null )
+        {
             instance = new SQLTypeMapping();
         }
 
         return instance;
     }
 
-    public Class<?> getJavaClass(int sqlType) {
-        return get(sqlType);
+    public Class<?> getJavaClass( int sqlType )
+    {
+        return get( sqlType );
     }
 }

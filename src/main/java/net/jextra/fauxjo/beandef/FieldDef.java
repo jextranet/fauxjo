@@ -21,11 +21,11 @@
 
 package net.jextra.fauxjo.beandef;
 
-import net.jextra.fauxjo.FauxjoException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
+import net.jextra.fauxjo.*;
 
-public class FieldDef {
+public class FieldDef
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -41,7 +41,8 @@ public class FieldDef {
     // Constructors
     // ============================================================
 
-    public Field getField() {
+    public Field getField()
+    {
         return field;
     }
 
@@ -53,73 +54,99 @@ public class FieldDef {
     // public
     // ----------
 
-    public void setField(Field field) throws FauxjoException {
+    public void setField( Field field )
+        throws FauxjoException
+    {
         this.field = field;
 
-        if (valueClass == null) {
+        if ( valueClass == null )
+        {
             valueClass = field.getType();
-        } else {
-            if (!valueClass.equals(field.getType())) {
-                throw new FauxjoException("Field [" + field.getName() + "] must have type of [" + valueClass.getCanonicalName() + "]");
+        }
+        else
+        {
+            if ( !valueClass.equals( field.getType() ) )
+            {
+                throw new FauxjoException( "Field [" + field.getName() + "] must have type of [" + valueClass.getCanonicalName() + "]" );
             }
         }
     }
 
-    public Method getWriteMethod() {
+    public Method getWriteMethod()
+    {
         return writeMethod;
     }
 
-    public void setWriteMethod(Method writeMethod) throws FauxjoException {
+    public void setWriteMethod( Method writeMethod )
+        throws FauxjoException
+    {
         this.writeMethod = writeMethod;
 
-        if (valueClass == null) {
+        if ( valueClass == null )
+        {
             valueClass = writeMethod.getParameterTypes()[0];
-        } else {
-            if (!valueClass.equals(writeMethod.getParameterTypes()[0])) {
+        }
+        else
+        {
+            if ( !valueClass.equals( writeMethod.getParameterTypes()[0] ) )
+            {
                 throw new FauxjoException(
-                    "Write method [" + writeMethod.getName() + "] must have first argument of type [" + valueClass.getCanonicalName() + "]");
+                    "Write method [" + writeMethod.getName() + "] must have first argument of type [" + valueClass.getCanonicalName() + "]" );
             }
         }
     }
 
-    public Method getReadMethod() {
+    public Method getReadMethod()
+    {
         return readMethod;
     }
 
-    public void setReadMethod(Method readMethod) throws FauxjoException {
+    public void setReadMethod( Method readMethod )
+        throws FauxjoException
+    {
         this.readMethod = readMethod;
 
-        if (valueClass == null) {
+        if ( valueClass == null )
+        {
             valueClass = readMethod.getReturnType();
-        } else {
-            if (!valueClass.equals(readMethod.getReturnType())) {
+        }
+        else
+        {
+            if ( !valueClass.equals( readMethod.getReturnType() ) )
+            {
                 throw new FauxjoException(
-                    "Read method [" + readMethod.getName() + "] must have return type of [" + valueClass.getCanonicalName() + "]");
+                    "Read method [" + readMethod.getName() + "] must have return type of [" + valueClass.getCanonicalName() + "]" );
             }
         }
     }
 
-    public boolean isPrimaryKey() {
+    public boolean isPrimaryKey()
+    {
         return primaryKey;
     }
 
-    public void setPrimaryKey(boolean primaryKey) {
+    public void setPrimaryKey( boolean primaryKey )
+    {
         this.primaryKey = primaryKey;
     }
 
-    public Class<?> getValueClass() {
+    public Class<?> getValueClass()
+    {
         return valueClass;
     }
 
-    public void setValueClass(Class<?> valueClass) {
+    public void setValueClass( Class<?> valueClass )
+    {
         this.valueClass = valueClass;
     }
 
-    public boolean isDefaultable() {
+    public boolean isDefaultable()
+    {
         return defaultable;
     }
 
-    public void setDefaultable(boolean defaultable) {
+    public void setDefaultable( boolean defaultable )
+    {
         this.defaultable = defaultable;
     }
 }

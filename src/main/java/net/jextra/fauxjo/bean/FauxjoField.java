@@ -29,9 +29,10 @@ import java.lang.annotation.*;
  * <p>
  * Note, this overrides any use of {@link FauxjoGetter}'s and {@link FauxjoSetter}'s.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-public @interface FauxjoField {
+@Retention( RetentionPolicy.RUNTIME )
+@Target( ElementType.FIELD )
+public @interface FauxjoField
+{
     // Column in database.
     String value();
 

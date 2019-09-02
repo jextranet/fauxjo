@@ -29,7 +29,8 @@ import java.util.*;
  * Fauxjo bean. This is used primarily to iterate over a large number records without having to
  * load them all into memory.
  */
-public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
+public class ResultSetIterator<T> implements Iterator<T>, Iterable<T>
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -42,14 +43,18 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // Constructors
     // ============================================================
 
-    public ResultSetIterator(ResultSet resultSet, Builder<T> builder) throws SQLException {
+    public ResultSetIterator( ResultSet resultSet, Builder<T> builder )
+        throws SQLException
+    {
         this.builder = builder;
         this.resultSet = resultSet;
         hasNext = resultSet.next();
     }
 
-    public ResultSetIterator(ResultSet resultSet, Class<T> clzz) throws SQLException {
-        this.builder = new BeanBuilder<T>(clzz, true);
+    public ResultSetIterator( ResultSet resultSet, Class<T> clzz )
+        throws SQLException
+    {
+        this.builder = new BeanBuilder<T>( clzz, true );
         this.resultSet = resultSet;
         hasNext = resultSet.next();
     }
@@ -63,49 +68,63 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // ----------
 
     @Override
-    public boolean hasNext() {
+    public boolean hasNext()
+    {
         return hasNext;
     }
 
     @Override
-    public T next() {
-        if (!hasNext) {
+    public T next()
+    {
+        if ( !hasNext )
+        {
             return null;
         }
 
-        try {
-            T bean = builder.buildBean(resultSet);
+        try
+        {
+            T bean = builder.buildBean( resultSet );
             hasNext = resultSet.next();
-            if (!hasNext) {
+            if ( !hasNext )
+            {
                 close();
             }
 
             return bean;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        }
+        catch ( Exception ex )
+        {
+            throw new RuntimeException( ex );
         }
     }
 
     @Override
-    public void remove() {
-        throw new UnsupportedOperationException("Remove is not supported for " + "ResultSetIterators.");
+    public void remove()
+    {
+        throw new UnsupportedOperationException( "Remove is not supported for " + "ResultSetIterators." );
     }
 
-    public void close() throws SQLException {
-        if (resultSet != null) {
+    public void close()
+        throws SQLException
+    {
+        if ( resultSet != null )
+        {
             resultSet.close();
             resultSet = null;
         }
     }
 
     @Override
-    public void finalize() throws Throwable {
+    public void finalize()
+        throws Throwable
+    {
         close();
         super.finalize();
     }
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<T> iterator()
+    {
         return this;
     }
 
@@ -113,7 +132,9 @@ public class ResultSetIterator<T> implements Iterator<T>, Iterable<T> {
     // Inner Classes
     // ============================================================
 
-    public interface Builder<T> {
-        T buildBean(ResultSet rs) throws SQLException;
+    public interface Builder<T>
+    {
+        T buildBean( ResultSet rs )
+            throws SQLException;
     }
 }

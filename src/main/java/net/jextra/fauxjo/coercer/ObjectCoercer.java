@@ -21,7 +21,8 @@
 
 package net.jextra.fauxjo.coercer;
 
-public class ObjectCoercer implements TypeCoercer<Object> {
+public class ObjectCoercer implements TypeCoercer<Object>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -31,13 +32,15 @@ public class ObjectCoercer implements TypeCoercer<Object> {
     // ----------
 
     @Override
-    public Object coerce(Object value, Class<?> destClass) {
+    public Object coerce( Object value, Class<?> destClass )
+    {
         //
         // Basically a pass thru if the destClass is the same as the value class, then cast it and
         // set it.
         //
-        if (destClass.isInstance(value)) {
-            return destClass.cast(value);
+        if ( destClass.isInstance( value ) )
+        {
+            return destClass.cast( value );
         }
 
         return value;

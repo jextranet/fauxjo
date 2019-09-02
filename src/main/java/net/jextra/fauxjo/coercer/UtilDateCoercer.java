@@ -24,7 +24,8 @@ package net.jextra.fauxjo.coercer;
 import java.sql.*;
 import net.jextra.fauxjo.*;
 
-public class UtilDateCoercer implements TypeCoercer<java.util.Date> {
+public class UtilDateCoercer implements TypeCoercer<java.util.Date>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -34,14 +35,19 @@ public class UtilDateCoercer implements TypeCoercer<java.util.Date> {
     // ----------
 
     @Override
-    public Object coerce(java.util.Date value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(java.sql.Date.class)) {
-            return new java.sql.Date(value.getTime());
-        } else if (destClass.equals(Timestamp.class)) {
-            return new Timestamp(value.getTime());
+    public Object coerce( java.util.Date value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( java.sql.Date.class ) )
+        {
+            return new java.sql.Date( value.getTime() );
+        }
+        else if ( destClass.equals( Timestamp.class ) )
+        {
+            return new Timestamp( value.getTime() );
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 
 }

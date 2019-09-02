@@ -10,7 +10,8 @@ import java.sql.*;
 /**
  * A clean convience class to manage a database "transaction".
  */
-public class Transaction {
+public class Transaction
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -23,38 +24,46 @@ public class Transaction {
     // Constructors
     // ============================================================
 
-    public Transaction(Connection connection) {
+    public Transaction( Connection connection )
+    {
         this.connection = connection;
 
         //
         // Save autocommit value and set to false.
         //
-        try {
+        try
+        {
             savedAutoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
-        } catch (SQLException ex) {
+            connection.setAutoCommit( false );
+        }
+        catch ( SQLException ex )
+        {
             // Wrap in RuntimeException because very unlikely to occur anyways and annoying to
             // have constructor for creating transaction have to be caught.
-            throw new RuntimeException(ex);
+            throw new RuntimeException( ex );
         }
     }
 
-    public Transaction(Connection connection, String savepointName) {
+    public Transaction( Connection connection, String savepointName )
+    {
         this.connection = connection;
 
         //
         // Save autocommit value and set to false.
         // Create savepoint.
         //
-        try {
+        try
+        {
             savedAutoCommit = connection.getAutoCommit();
-            connection.setAutoCommit(false);
+            connection.setAutoCommit( false );
 
-            savepoint = connection.setSavepoint(savepointName);
-        } catch (SQLException ex) {
+            savepoint = connection.setSavepoint( savepointName );
+        }
+        catch ( SQLException ex )
+        {
             // Wrap in RuntimeException because very unlikely to occur anyways and annoying to
             // have constructor for creating transaction have to be caught.
-            throw new RuntimeException(ex);
+            throw new RuntimeException( ex );
         }
     }
 
@@ -66,29 +75,41 @@ public class Transaction {
     // public
     // ----------
 
-    public Savepoint getSavepoint() {
+    public Savepoint getSavepoint()
+    {
         return savepoint;
     }
 
-    public void rollback() {
-        try {
-            if (savepoint != null) {
-                connection.rollback(savepoint);
-            } else {
+    public void rollback()
+    {
+        try
+        {
+            if ( savepoint != null )
+            {
+                connection.rollback( savepoint );
+            }
+            else
+            {
                 connection.rollback();
             }
-            connection.setAutoCommit(savedAutoCommit);
-        } catch (SQLException ex) {
-            throw new RuntimeException(ex);
+            connection.setAutoCommit( savedAutoCommit );
+        }
+        catch ( SQLException ex )
+        {
+            throw new RuntimeException( ex );
         }
     }
 
-    public void commit() {
-        try {
+    public void commit()
+    {
+        try
+        {
             connection.commit();
-            connection.setAutoCommit(savedAutoCommit);
-        } catch (SQLException ex) {
-            throw new RuntimeException(ex);
+            connection.setAutoCommit( savedAutoCommit );
+        }
+        catch ( SQLException ex )
+        {
+            throw new RuntimeException( ex );
         }
     }
 
@@ -97,20 +118,26 @@ public class Transaction {
      * {@link #rollback} has been called. This will restore the connection's autocommit state back to its
      * previous value.
      */
-    public void cleanup() {
-        try {
-            if (connection != null && !connection.getAutoCommit() && savedAutoCommit) {
+    public void cleanup()
+    {
+        try
+        {
+            if ( connection != null && !connection.getAutoCommit() && savedAutoCommit )
+            {
                 //                XLog.error("Transaction was not committed or rolled back.");
                 //                XLog.errorf("Setting auto-commit to %b and rolling back", savedAutoCommit);
                 connection.rollback();
-                connection.setAutoCommit(savedAutoCommit);
+                connection.setAutoCommit( savedAutoCommit );
             }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        }
+        catch ( SQLException e )
+        {
+            throw new RuntimeException( e );
         }
     }
 
-    public Connection getConnection() {
+    public Connection getConnection()
+    {
         return connection;
     }
 }

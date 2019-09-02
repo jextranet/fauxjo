@@ -23,7 +23,8 @@ package net.jextra.fauxjo.coercer;
 
 import net.jextra.fauxjo.*;
 
-public class ByteCoercer implements TypeCoercer<Byte> {
+public class ByteCoercer implements TypeCoercer<Byte>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -33,16 +34,23 @@ public class ByteCoercer implements TypeCoercer<Byte> {
     // ----------
 
     @Override
-    public Object coerce(Byte value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(Short.class)) {
+    public Object coerce( Byte value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( Short.class ) )
+        {
             return value.shortValue();
-        } else if (destClass.equals(Integer.class)) {
+        }
+        else if ( destClass.equals( Integer.class ) )
+        {
             return value.intValue();
-        } else if (destClass.equals(Long.class)) {
+        }
+        else if ( destClass.equals( Long.class ) )
+        {
             return value.longValue();
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 
 }

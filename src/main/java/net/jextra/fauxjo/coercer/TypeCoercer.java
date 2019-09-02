@@ -29,7 +29,8 @@ import net.jextra.fauxjo.*;
  * databas does not "exactly" match the bean's field type.
  * </p>
  */
-public interface TypeCoercer<T> {
+public interface TypeCoercer<T>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -38,5 +39,6 @@ public interface TypeCoercer<T> {
     // public
     // ----------
 
-    Object coerce(T value, Class<?> destClass) throws FauxjoException;
+    Object coerce( T value, Class<?> destClass )
+        throws FauxjoException;
 }

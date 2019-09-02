@@ -24,7 +24,8 @@ package net.jextra.fauxjo.coercer;
 import java.math.*;
 import net.jextra.fauxjo.*;
 
-public class BigIntegerCoercer implements TypeCoercer<BigInteger> {
+public class BigIntegerCoercer implements TypeCoercer<BigInteger>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -34,18 +35,27 @@ public class BigIntegerCoercer implements TypeCoercer<BigInteger> {
     // ----------
 
     @Override
-    public Object coerce(BigInteger value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(Byte.class)) {
+    public Object coerce( BigInteger value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( Byte.class ) )
+        {
             return value.byteValue();
-        } else if (destClass.equals(Short.class)) {
+        }
+        else if ( destClass.equals( Short.class ) )
+        {
             return value.shortValue();
-        } else if (destClass.equals(Integer.class)) {
+        }
+        else if ( destClass.equals( Integer.class ) )
+        {
             return value.intValue();
-        } else if (destClass.equals(Long.class)) {
+        }
+        else if ( destClass.equals( Long.class ) )
+        {
             return value.longValue();
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 
 }

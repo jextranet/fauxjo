@@ -23,7 +23,8 @@ package net.jextra.fauxjo.coercer;
 
 import net.jextra.fauxjo.*;
 
-public class FloatCoercer implements TypeCoercer<Float> {
+public class FloatCoercer implements TypeCoercer<Float>
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -33,12 +34,15 @@ public class FloatCoercer implements TypeCoercer<Float> {
     // ----------
 
     @Override
-    public Object coerce(Float value, Class<?> destClass) throws FauxjoException {
-        if (destClass.equals(Double.class)) {
+    public Object coerce( Float value, Class<?> destClass )
+        throws FauxjoException
+    {
+        if ( destClass.equals( Double.class ) )
+        {
             return value.doubleValue();
         }
 
-        throw new FauxjoException(String.format("The %s does not know how to convert to type %s", getClass().getName(), destClass));
+        throw new FauxjoException( String.format( "The %s does not know how to convert to type %s", getClass().getName(), destClass ) );
     }
 
 }

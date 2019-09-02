@@ -40,7 +40,8 @@ import javax.sql.*;
  * connectionSupplier.close();
  * </pre>
  */
-public class PrincipalConnectionSupplier implements ConnectionSupplier {
+public class PrincipalConnectionSupplier implements ConnectionSupplier
+{
     // ============================================================
     // Fields
     // ============================================================
@@ -49,22 +50,25 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
 
     private DataSource dataSource;
     private ThreadLocal<Connection> localConnection;
-    private ThreadLocal<HashMap<String,PreparedStatement>> localPreparedStatements;
-    private ThreadLocal<HashMap<String,CallableStatement>> localPreparedCalls;
+    private ThreadLocal<HashMap<String, PreparedStatement>> localPreparedStatements;
+    private ThreadLocal<HashMap<String, CallableStatement>> localPreparedCalls;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public PrincipalConnectionSupplier() {
+    public PrincipalConnectionSupplier()
+    {
         localConnection = new ThreadLocal<>();
         localPreparedStatements = new ThreadLocal<>();
         localPreparedCalls = new ThreadLocal<>();
     }
 
-    public PrincipalConnectionSupplier(DataSource ds) throws SQLException {
+    public PrincipalConnectionSupplier( DataSource ds )
+        throws SQLException
+    {
         this();
-        setDataSource(ds);
+        setDataSource( ds );
     }
 
     // ============================================================
@@ -75,19 +79,25 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
     // public
     // ----------
 
-    public DataSource getDataSource() {
+    public DataSource getDataSource()
+    {
         return dataSource;
     }
 
-    public void setDataSource(DataSource dataSource) throws SQLException {
+    public void setDataSource( DataSource dataSource )
+        throws SQLException
+    {
         this.dataSource = dataSource;
     }
 
     @Override
-    public Connection getConnection() throws SQLException {
+    public Connection getConnection()
+        throws SQLException
+    {
         Connection cnx;
-        if (localConnection.get() == null) {
-            localConnection.set(getDataSource().getConnection());
+        if ( localConnection.get() == null )
+        {
+            localConnection.set( getDataSource().getConnection() );
         }
 
         cnx = localConnection.get();
@@ -96,61 +106,78 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
+    public PreparedStatement prepareStatement( String sql )
+        throws SQLException
+    {
         validateConnection();
 
-        HashMap<String,PreparedStatement> map = localPreparedStatements.get();
-        if (map == null) {
+        HashMap<String, PreparedStatement> map = localPreparedStatements.get();
+        if ( map == null )
+        {
             map = new HashMap<>();
-            localPreparedStatements.set(map);
+            localPreparedStatements.set( map );
         }
 
-        PreparedStatement statement = map.get(sql);
+        PreparedStatement statement = map.get( sql );
 
-        if (statement == null || statement.isClosed()) {
-            if (SQLInspector.isInsertStatement(sql)) {
-                statement = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            } else {
-                statement = getConnection().prepareStatement(sql);
+        if ( statement == null || statement.isClosed() )
+        {
+            if ( SQLInspector.isInsertStatement( sql ) )
+            {
+                statement = getConnection().prepareStatement( sql, Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                statement = getConnection().prepareStatement( sql );
             }
 
-            map.put(sql, statement);
+            map.put( sql, statement );
         }
 
         return statement;
     }
 
     @Override
-    public PreparedStatement prepareCall(String sql) throws SQLException {
+    public PreparedStatement prepareCall( String sql )
+        throws SQLException
+    {
         validateConnection();
 
-        HashMap<String,CallableStatement> map = localPreparedCalls.get();
-        if (map == null) {
+        HashMap<String, CallableStatement> map = localPreparedCalls.get();
+        if ( map == null )
+        {
             map = new HashMap<>();
-            localPreparedCalls.set(map);
+            localPreparedCalls.set( map );
         }
 
-        CallableStatement call = map.get(sql);
+        CallableStatement call = map.get( sql );
 
-        if (call == null || call.isClosed()) {
-            call = getConnection().prepareCall(sql);
+        if ( call == null || call.isClosed() )
+        {
+            call = getConnection().prepareCall( sql );
 
-            map.put(sql, call);
+            map.put( sql, call );
         }
 
         return call;
     }
 
     @Override
-    public boolean close() throws SQLException {
-        HashMap<String,PreparedStatement> statementMap = localPreparedStatements.get();
-        if (statementMap != null) {
-            for (PreparedStatement statement : statementMap.values()) {
-                if (statement == null) {
+    public boolean close()
+        throws SQLException
+    {
+        HashMap<String, PreparedStatement> statementMap = localPreparedStatements.get();
+        if ( statementMap != null )
+        {
+            for ( PreparedStatement statement : statementMap.values() )
+            {
+                if ( statement == null )
+                {
                     continue;
                 }
 
-                if (!statement.isClosed()) {
+                if ( !statement.isClosed() )
+                {
                     statement.close();
                 }
             }
@@ -158,14 +185,18 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
             localPreparedStatements.remove();
         }
 
-        HashMap<String,CallableStatement> callMap = localPreparedCalls.get();
-        if (callMap != null) {
-            for (CallableStatement call : callMap.values()) {
-                if (call == null) {
+        HashMap<String, CallableStatement> callMap = localPreparedCalls.get();
+        if ( callMap != null )
+        {
+            for ( CallableStatement call : callMap.values() )
+            {
+                if ( call == null )
+                {
                     continue;
                 }
 
-                if (!call.isClosed()) {
+                if ( !call.isClosed() )
+                {
                     call.close();
                 }
             }
@@ -174,7 +205,8 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
         }
 
         Connection cnx = localConnection.get();
-        if (cnx != null) {
+        if ( cnx != null )
+        {
             cnx.close();
             localConnection.remove();
 
@@ -184,10 +216,13 @@ public class PrincipalConnectionSupplier implements ConnectionSupplier {
         return false;
     }
 
-    public void validateConnection() throws SQLException {
+    public void validateConnection()
+        throws SQLException
+    {
         Connection cnx = getConnection();
 
-        if (cnx != null && !cnx.isValid(TIMEOUT)) {
+        if ( cnx != null && !cnx.isValid( TIMEOUT ) )
+        {
             close();
 
             // Remove non-valid connection.

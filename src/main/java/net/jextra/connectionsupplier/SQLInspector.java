@@ -25,12 +25,13 @@ package net.jextra.connectionsupplier;
 
 import java.util.regex.*;
 
-final class SQLInspector {
+final class SQLInspector
+{
     // ============================================================
     // Fields
     // ============================================================
 
-    private static final Pattern INSERT_PATTERN = Pattern.compile("insert\\sinto", Pattern.CASE_INSENSITIVE);
+    private static final Pattern INSERT_PATTERN = Pattern.compile( "insert\\sinto", Pattern.CASE_INSENSITIVE );
 
     // ============================================================
     // Methods
@@ -40,7 +41,8 @@ final class SQLInspector {
     // public
     // ----------
 
-    public static boolean isInsertStatement(String sql) {
-        return INSERT_PATTERN.matcher(sql).find();
+    public static boolean isInsertStatement( String sql )
+    {
+        return INSERT_PATTERN.matcher( sql ).find();
     }
 }

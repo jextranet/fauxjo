@@ -30,18 +30,20 @@ import net.jextra.fauxjo.*;
  * <p>
  * Processing the annotations on a class is rather slow. This object stores the results so that they can be placed in a cache.
  */
-public class BeanDef {
+public class BeanDef
+{
     // ============================================================
     // Fields
     // ============================================================
 
-    private Map<String,FieldDef> fieldDefs;
+    private Map<String, FieldDef> fieldDefs;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public BeanDef() {
+    public BeanDef()
+    {
         fieldDefs = new TreeMap<>();
     }
 
@@ -53,47 +55,60 @@ public class BeanDef {
     // public
     // ----------
 
-    public FieldDef addField(String key, Field field) throws FauxjoException {
-        final FieldDef fieldDef = getFieldDef(key);
-        fieldDef.setField(field);
+    public FieldDef addField( String key, Field field )
+        throws FauxjoException
+    {
+        final FieldDef fieldDef = getFieldDef( key );
+        fieldDef.setField( field );
         return fieldDef;
     }
 
-    public Field getField(String key) {
-        return getFieldDef(key).getField();
+    public Field getField( String key )
+    {
+        return getFieldDef( key ).getField();
     }
 
-    public void addReadMethod(String key, Method method) throws FauxjoException {
-        getFieldDef(key).setReadMethod(method);
+    public void addReadMethod( String key, Method method )
+        throws FauxjoException
+    {
+        getFieldDef( key ).setReadMethod( method );
     }
 
-    public Method getReadMethod(String key) {
-        return getFieldDef(key).getReadMethod();
+    public Method getReadMethod( String key )
+    {
+        return getFieldDef( key ).getReadMethod();
     }
 
-    public void addWriteMethod(String key, Method method) throws FauxjoException {
-        getFieldDef(key).setWriteMethod(method);
+    public void addWriteMethod( String key, Method method )
+        throws FauxjoException
+    {
+        getFieldDef( key ).setWriteMethod( method );
     }
 
-    public Method getWriteMethod(String key) {
-        return getFieldDef(key).getWriteMethod();
+    public Method getWriteMethod( String key )
+    {
+        return getFieldDef( key ).getWriteMethod();
     }
 
-    public Map<String,FieldDef> getFieldDefs() {
-        TreeMap<String,FieldDef> map = new TreeMap<>();
+    public Map<String, FieldDef> getFieldDefs()
+    {
+        TreeMap<String, FieldDef> map = new TreeMap<>();
 
-        for (String key : fieldDefs.keySet()) {
-            map.put(key, getFieldDef(key));
+        for ( String key : fieldDefs.keySet() )
+        {
+            map.put( key, getFieldDef( key ) );
         }
 
         return map;
     }
 
-    public FieldDef getFieldDef(String key) {
-        FieldDef def = fieldDefs.get(key.toLowerCase());
-        if (def == null) {
+    public FieldDef getFieldDef( String key )
+    {
+        FieldDef def = fieldDefs.get( key.toLowerCase() );
+        if ( def == null )
+        {
             def = new FieldDef();
-            fieldDefs.put(key.toLowerCase(), def);
+            fieldDefs.put( key.toLowerCase(), def );
         }
 
         return def;

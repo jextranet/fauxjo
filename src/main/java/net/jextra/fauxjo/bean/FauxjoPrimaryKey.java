@@ -29,7 +29,8 @@ import java.lang.annotation.*;
  * <p>
  * In particular this is used to auto-create insert, update, and delete SQL statements.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.FIELD })
-public @interface FauxjoPrimaryKey {
+@Retention( RetentionPolicy.RUNTIME )
+@Target( { ElementType.METHOD, ElementType.FIELD } )
+public @interface FauxjoPrimaryKey
+{
 }

@@ -27,20 +27,24 @@ import java.sql.*;
  * An Exception that is specific to the Fauxjo library. The reason it extends SQLException is that a FauxjoException is a kind of database
  * exception.
  */
-public class FauxjoException extends SQLException {
+public class FauxjoException extends SQLException
+{
     // ============================================================
     // Constructors
     // ============================================================
 
-    public FauxjoException(String message) {
-        super(message);
+    public FauxjoException( String message )
+    {
+        super( message );
     }
 
-    public FauxjoException(String message, Throwable ex) {
-        super(message, ex);
+    public FauxjoException( String message, Throwable ex )
+    {
+        super( message, ex );
     }
 
-    public FauxjoException(Throwable ex) {
-        initCause(ex);
+    public FauxjoException( Throwable ex )
+    {
+        initCause( ex );
     }
 }

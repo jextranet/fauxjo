@@ -25,35 +25,40 @@ import java.sql.*;
 import java.util.*;
 import javax.sql.*;
 
-public class MinimalConnectionSupplier implements ConnectionSupplier {
+public class MinimalConnectionSupplier implements ConnectionSupplier
+{
     // ============================================================
     // Fields
     // ============================================================
 
     private Connection connection;
     private DataSource dataSource;
-    private HashMap<String,PreparedStatement> preparedStatements;
-    private HashMap<String,CallableStatement> preparedCalls;
+    private HashMap<String, PreparedStatement> preparedStatements;
+    private HashMap<String, CallableStatement> preparedCalls;
 
     // ============================================================
     // Constructors
     // ============================================================
 
-    public MinimalConnectionSupplier() {
+    public MinimalConnectionSupplier()
+    {
         preparedStatements = new HashMap<>();
         preparedCalls = new HashMap<>();
     }
 
-    public MinimalConnectionSupplier(Connection conn) {
+    public MinimalConnectionSupplier( Connection conn )
+    {
         this();
 
-        setConnection(conn);
+        setConnection( conn );
     }
 
-    public MinimalConnectionSupplier(DataSource ds) throws SQLException {
+    public MinimalConnectionSupplier( DataSource ds )
+        throws SQLException
+    {
         this();
 
-        setDataSource(ds);
+        setDataSource( ds );
     }
 
     // ============================================================
@@ -64,74 +69,96 @@ public class MinimalConnectionSupplier implements ConnectionSupplier {
     // public
     // ----------
 
-    public void setDataSource(DataSource ds) throws SQLException {
+    public void setDataSource( DataSource ds )
+        throws SQLException
+    {
         dataSource = ds;
         connection = dataSource.getConnection();
     }
 
-    public void setConnection(Connection conn) {
+    public void setConnection( Connection conn )
+    {
         connection = conn;
         dataSource = null;
     }
 
     @Override
-    public Connection getConnection() throws SQLException {
+    public Connection getConnection()
+        throws SQLException
+    {
         validateConnection();
 
         return connection;
     }
 
     @Override
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
+    public PreparedStatement prepareStatement( String sql )
+        throws SQLException
+    {
         validateConnection();
 
-        PreparedStatement statement = preparedStatements.get(sql);
-        if (statement == null || statement.isClosed()) {
-            if (SQLInspector.isInsertStatement(sql)) {
-                statement = getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            } else {
-                statement = getConnection().prepareStatement(sql);
+        PreparedStatement statement = preparedStatements.get( sql );
+        if ( statement == null || statement.isClosed() )
+        {
+            if ( SQLInspector.isInsertStatement( sql ) )
+            {
+                statement = getConnection().prepareStatement( sql, Statement.RETURN_GENERATED_KEYS );
             }
-            preparedStatements.put(sql, statement);
+            else
+            {
+                statement = getConnection().prepareStatement( sql );
+            }
+            preparedStatements.put( sql, statement );
         }
 
         return statement;
     }
 
     @Override
-    public PreparedStatement prepareCall(String sql) throws SQLException {
+    public PreparedStatement prepareCall( String sql )
+        throws SQLException
+    {
         validateConnection();
 
-        CallableStatement call = preparedCalls.get(sql);
-        if (call == null || call.isClosed()) {
-            call = getConnection().prepareCall(sql);
-            preparedCalls.put(sql, call);
+        CallableStatement call = preparedCalls.get( sql );
+        if ( call == null || call.isClosed() )
+        {
+            call = getConnection().prepareCall( sql );
+            preparedCalls.put( sql, call );
         }
 
         return call;
     }
 
     @Override
-    public boolean close() throws SQLException {
-        for (PreparedStatement statement : preparedStatements.values()) {
-            if (!statement.isClosed()) {
+    public boolean close()
+        throws SQLException
+    {
+        for ( PreparedStatement statement : preparedStatements.values() )
+        {
+            if ( !statement.isClosed() )
+            {
                 statement.close();
             }
         }
         preparedStatements.clear();
 
-        for (CallableStatement call : preparedCalls.values()) {
-            if (!call.isClosed()) {
+        for ( CallableStatement call : preparedCalls.values() )
+        {
+            if ( !call.isClosed() )
+            {
                 call.close();
             }
         }
         preparedCalls.clear();
 
-        if (connection == null) {
+        if ( connection == null )
+        {
             return false;
         }
 
-        if (connection != null) {
+        if ( connection != null )
+        {
             connection.close();
         }
 
@@ -140,12 +167,16 @@ public class MinimalConnectionSupplier implements ConnectionSupplier {
         return true;
     }
 
-    public void validateConnection() throws SQLException {
-        if (connection != null && !connection.isValid(1000)) {
+    public void validateConnection()
+        throws SQLException
+    {
+        if ( connection != null && !connection.isValid( 1000 ) )
+        {
             close();
 
             // If there is a dataSource, go get a new connection.
-            if (dataSource != null) {
+            if ( dataSource != null )
+            {
                 connection = dataSource.getConnection();
             }
         }

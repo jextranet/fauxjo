@@ -31,7 +31,8 @@ import net.jextra.fauxjo.beandef.*;
  * Note: This implementation overrides the {@code hashCode} and {@code equals} methods in order to properly compare Fauxjo's properly (e.g. same
  * primary key) when placed in Collections, etc.
  */
-public abstract class Fauxjo {
+public abstract class Fauxjo
+{
     // ============================================================
     // Methods
     // ============================================================
@@ -41,37 +42,47 @@ public abstract class Fauxjo {
     // ----------
 
     @Override
-    public int hashCode() {
-        try {
+    public int hashCode()
+    {
+        try
+        {
             List<Object> keys = getPrimaryKeyValues();
 
             // Any null keys equate to default of zero.
-            if (keys == null) {
+            if ( keys == null )
+            {
                 return 0;
             }
 
             // Just sum up the key item hashCodes for a final hashCode
             int hashCode = 0;
-            for (Object item : keys) {
+            for ( Object item : keys )
+            {
                 hashCode += item == null ? 0 : item.hashCode();
             }
 
             return hashCode;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        }
+        catch ( Exception ex )
+        {
+            throw new RuntimeException( ex );
         }
     }
 
     @Override
-    public boolean equals(Object otherObj) {
-        try {
+    public boolean equals( Object otherObj )
+    {
+        try
+        {
             // If same object, just quickly return true.
-            if (this == otherObj) {
+            if ( this == otherObj )
+            {
                 return true;
             }
 
             // If other object is not same class as this object, quickly return false.
-            if (otherObj == null || !otherObj.getClass().equals(getClass())) {
+            if ( otherObj == null || !otherObj.getClass().equals( getClass() ) )
+            {
                 return false;
             }
 
@@ -81,29 +92,37 @@ public abstract class Fauxjo {
             List<Object> keys2 = other.getPrimaryKeyValues();
 
             // If the primary keys somehow are different lengths, they must not be the same.
-            if (keys1.size() != keys2.size()) {
+            if ( keys1.size() != keys2.size() )
+            {
                 return false;
             }
 
             // Check each key item, if ever different, return false;
-            for (int i = 0; i < keys1.size(); i++) {
-                Object item1 = keys1.get(i);
-                Object item2 = keys2.get(i);
+            for ( int i = 0; i < keys1.size(); i++ )
+            {
+                Object item1 = keys1.get( i );
+                Object item2 = keys2.get( i );
 
-                if (item1 == null && item2 != null) {
+                if ( item1 == null && item2 != null )
+                {
                     return false;
-                } else if (!item1.equals(item2)) {
+                }
+                else if ( !item1.equals( item2 ) )
+                {
                     return false;
                 }
             }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        }
+        catch ( Exception ex )
+        {
+            throw new RuntimeException( ex );
         }
 
         return true;
     }
 
-    public String toString() {
+    public String toString()
+    {
         return getClass().getName() + buildKeyValueString();
     }
 
@@ -111,24 +130,33 @@ public abstract class Fauxjo {
     // protected
     // ----------
 
-    protected String buildKeyValueString() {
+    protected String buildKeyValueString()
+    {
         StringBuilder builder = new StringBuilder();
 
-        try {
-            Map<String,FieldDef> map = BeanDefCache.getFieldDefs(getClass());
-            for (String key : map.keySet()) {
-                FieldDef def = map.get(key);
-                if (def.isPrimaryKey()) {
-                    if (def.getField() != null) {
-                        def.getField().setAccessible(true);
-                        builder.append(String.format(" %s:%s", key, def.getField().get(this)));
-                    } else {
-                        builder.append(String.format(" %s:%s", key, def.getReadMethod().invoke(this, new Object[0])));
+        try
+        {
+            Map<String, FieldDef> map = BeanDefCache.getFieldDefs( getClass() );
+            for ( String key : map.keySet() )
+            {
+                FieldDef def = map.get( key );
+                if ( def.isPrimaryKey() )
+                {
+                    if ( def.getField() != null )
+                    {
+                        def.getField().setAccessible( true );
+                        builder.append( String.format( " %s:%s", key, def.getField().get( this ) ) );
+                    }
+                    else
+                    {
+                        builder.append( String.format( " %s:%s", key, def.getReadMethod().invoke( this, new Object[0] ) ) );
                     }
                 }
             }
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        }
+        catch ( Exception ex )
+        {
+            throw new RuntimeException( ex );
         }
 
         return builder.toString();
@@ -137,35 +165,47 @@ public abstract class Fauxjo {
     /**
      * @return Values of primary keys in a consistent order so that it can be compared to other Fauxjo beans.
      */
-    protected List<Object> getPrimaryKeyValues() throws FauxjoException {
-        try {
+    protected List<Object> getPrimaryKeyValues()
+        throws FauxjoException
+    {
+        try
+        {
             // Arbitrarily ordered by keys.
-            TreeMap<String,Object> keys = new TreeMap<>();
+            TreeMap<String, Object> keys = new TreeMap<>();
 
-            Map<String,FieldDef> map = BeanDefCache.getFieldDefs(getClass());
-            for (String key : map.keySet()) {
-                FieldDef def = map.get(key);
-                if (def.isPrimaryKey()) {
-                    if (def.getField() != null) {
-                        def.getField().setAccessible(true);
-                        keys.put(key, def.getField().get(this));
-                    } else {
-                        keys.put(key, def.getReadMethod().invoke(this, new Object[0]));
+            Map<String, FieldDef> map = BeanDefCache.getFieldDefs( getClass() );
+            for ( String key : map.keySet() )
+            {
+                FieldDef def = map.get( key );
+                if ( def.isPrimaryKey() )
+                {
+                    if ( def.getField() != null )
+                    {
+                        def.getField().setAccessible( true );
+                        keys.put( key, def.getField().get( this ) );
+                    }
+                    else
+                    {
+                        keys.put( key, def.getReadMethod().invoke( this, new Object[0] ) );
                     }
                 }
             }
 
-            if (keys.size() == 0) {
+            if ( keys.size() == 0 )
+            {
                 return null;
             }
 
-            return new ArrayList<>(keys.values());
-        } catch (Exception ex) {
-            if (ex instanceof FauxjoException) {
+            return new ArrayList<>( keys.values() );
+        }
+        catch ( Exception ex )
+        {
+            if ( ex instanceof FauxjoException )
+            {
                 throw (FauxjoException) ex;
             }
 
-            throw new FauxjoException(ex);
+            throw new FauxjoException( ex );
         }
     }
 }
