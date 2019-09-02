@@ -28,7 +28,7 @@ import net.jextra.fauxjo.bean.*;
 /**
  * Base implementation of a data access object.
  */
-public class Home<T extends Fauxjo>
+public class Home<T>
 {
     // ============================================================
     // Fields
