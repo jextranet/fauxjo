@@ -5,14 +5,14 @@
     <name>fauxjo</name>
     <packaging>jar</packaging>
     <version>7.9.0-2</version>
-    <url>https://github.com/jextranet/componentparent</url>
+    <url>https://github.com/jextranet/fauxjo</url>
 
     <!-- ==================== -->
     <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jdk.version>1.8</jdk.version>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>${jdk.version}</maven.compiler.source>
+        <maven.compiler.target>${jdk.version}</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <bitbucket.project>comp</bitbucket.project>
         <logging.level>warn</logging.level>
         <surefire.reuseForks>true</surefire.reuseForks>
@@ -79,52 +79,6 @@
                                         <arg>loopback</arg>
                                     </gpgArguments>
                                     <passphrase>${gpg.passphrase}</passphrase>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>auto-increment</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>autoincrement-versions-maven-plugin</artifactId>
-                        <version>2.0</version>
-                        <executions>
-                            <execution>
-                                <id>update-pom-versions</id>
-                                <goals>
-                                    <goal>increment</goal>
-                                    <goal>commit</goal>
-                                </goals>
-                                <phase>deploy</phase>
-                                <!--<configuration>-->
-                                <!--<autoIncrementVersion>true</autoIncrementVersion>-->
-                                <!--</configuration>-->
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-scm-plugin</artifactId>
-                        <version>1.9.4</version>
-                        <executions>
-                            <execution>
-                                <id>commit-pom</id>
-                                <goals>
-                                    <goal>checkin</goal>
-                                </goals>
-                                <phase>deploy</phase>
-                                <configuration>
-                                    <connectionType>developerConnection</connectionType>
-                                    <developerConnectionUrl>scm:git:https://github.com/jextranet/${project.artifactId}.git</developerConnectionUrl>
-                                    <includes>pom.xml</includes>
-                                    <message>Incremented version after release</message>
-                                    <pushChanges>true</pushChanges>
                                 </configuration>
                             </execution>
                         </executions>
