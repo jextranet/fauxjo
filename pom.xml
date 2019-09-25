@@ -18,6 +18,7 @@
         <logging.level>warn</logging.level>
         <surefire.reuseForks>true</surefire.reuseForks>
     </properties>
+
     <licenses>
         <license>
             <name>The Apache Software License, Version 2.0</name>
@@ -37,12 +38,14 @@
             <url>https://jextra.net</url>
         </developer>
     </developers>
+
     <scm>
         <connection>scm:git:https://github.com/jextranet/${project.artifactId}</connection>
         <developerConnection>scm:git:https://github.com/jextranet/${project.artifactId}</developerConnection>
         <url>https://github.com/jextranet/${project.artifactId}</url>
         <tag>${project.artifactId}-${project.version}</tag>
     </scm>
+
     <distributionManagement>
         <snapshotRepository>
             <id>ossrh</id>
@@ -53,6 +56,7 @@
             <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
+
     <profiles>
         <!-- GPG Signature on release -->
         <profile>
@@ -84,6 +88,7 @@
             </build>
         </profile>
     </profiles>
+
     <build>
         <extensions>
             <extension>
@@ -217,6 +222,7 @@
         </plugins>
     </build>
     <!-- ==================== -->
+
     <dependencies>
     </dependencies>
 </project>
