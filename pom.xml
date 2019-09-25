@@ -30,6 +30,8 @@
     <name>fauxjo</name>
     <packaging>jar</packaging>
     <version>11.3.0-1</version>
+    <url>https://github.com/jextranet/fauxjo</url>
+    <description>A database persistence layer for the real world.</description>
 
     <!-- ==================== -->
     <properties>
