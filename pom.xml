@@ -5,6 +5,8 @@
     <name>fauxjo</name>
     <packaging>jar</packaging>
     <version>9.3.0-1</version>
+    <url>https://github.com/jextranet/fauxjo</url>
+    <description>A database persistence layer for the real world.</description>
 
     <properties>
         <test.excludes>**/*IntegrationTest.java</test.excludes>
