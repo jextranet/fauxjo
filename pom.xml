@@ -21,11 +21,7 @@
 
 <project>
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>net.jextra</groupId>
-        <artifactId>componentparent</artifactId>
-        <version>1.2.0-1</version>
-    </parent>
+    <groupId>net.jextra</groupId>
     <artifactId>fauxjo</artifactId>
     <name>fauxjo</name>
     <packaging>jar</packaging>
@@ -246,7 +242,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>[4.11,)</version>
+            <version>4.11</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
