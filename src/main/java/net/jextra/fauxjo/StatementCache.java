@@ -252,6 +252,7 @@ public class StatementCache
         if ( map == null )
         {
             map = new WeakHashMap<>();
+            cache.set( map );
         }
 
         PerConnectionCache cc = map.get( conn );
