@@ -143,6 +143,7 @@ public class Table<T>
     }
 
     public String buildBasicSelectStatement( String clause )
+            throws SQLException
     {
         String trimmedClause = "";
         if ( clause != null && !clause.trim().isEmpty() )
@@ -150,7 +151,10 @@ public class Table<T>
             trimmedClause = clause;
         }
 
-        return String.format( "select * from %s %s", fullTableName, trimmedClause );
+        Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( beanClass );
+        String fields = String.join(", ", beanFieldDefs.keySet());
+
+        return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
 
     public PreparedStatement getInsertStatement( ConnectionSupplier cs, T bean )

@@ -24,7 +24,7 @@
     <artifactId>fauxjo</artifactId>
     <name>fauxjo</name>
     <packaging>jar</packaging>
-    <version>10.1.0-1</version>
+    <version>10.2.0-0</version>
     <url>https://github.com/jextranet/fauxjo</url>
     <description>A database persistence layer for the real world.</description>
 
@@ -77,7 +77,6 @@
         </repository>
     </distributionManagement>
 
-	
     <profiles>
         <!-- GPG Signature on release -->
         <profile>
