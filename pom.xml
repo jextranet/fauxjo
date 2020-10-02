@@ -24,7 +24,7 @@
     <artifactId>fauxjo</artifactId>
     <name>fauxjo</name>
     <packaging>jar</packaging>
-    <version>10.2.0-0</version>
+    <version>10.2.0-1</version>
     <url>https://github.com/jextranet/fauxjo</url>
     <description>A database persistence layer for the real world.</description>
 

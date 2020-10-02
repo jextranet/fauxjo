@@ -143,7 +143,6 @@ public class Table<T>
     }
 
     public String buildBasicSelectStatement( String clause )
-            throws SQLException
     {
         String trimmedClause = "";
         if ( clause != null && !clause.trim().isEmpty() )
@@ -151,8 +150,11 @@ public class Table<T>
             trimmedClause = clause;
         }
 
-        Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( beanClass );
-        String fields = String.join(", ", beanFieldDefs.keySet());
+        String fields = "*";
+        try {
+            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(beanClass);
+            fields = String.join(", ", beanFieldDefs.keySet());
+        } catch (SQLException sqle) {}
 
         return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
