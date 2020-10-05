@@ -135,7 +135,6 @@ public class Home<T extends Fauxjo>
     }
 
     public String buildBasicSelect( String clause )
-        throws SQLException
     {
         return table.buildBasicSelectStatement( clause );
     }
