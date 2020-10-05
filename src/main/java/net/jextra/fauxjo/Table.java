@@ -151,10 +151,15 @@ public class Table<T>
         }
 
         String fields = "*";
-        try {
+        try
+        {
             Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(beanClass);
             fields = String.join(", ", beanFieldDefs.keySet());
-        } catch (SQLException sqle) {}
+        }
+        catch (SQLException sqle)
+        {
+            // Do nothing, default to *
+        }
 
         return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
