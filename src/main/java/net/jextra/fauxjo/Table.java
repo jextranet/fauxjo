@@ -150,7 +150,18 @@ public class Table<T>
             trimmedClause = clause;
         }
 
-        return String.format( "select * from %s %s", fullTableName, trimmedClause );
+        String fields = "*";
+        try
+        {
+            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs(beanClass);
+            fields = String.join(", ", beanFieldDefs.keySet());
+        }
+        catch (SQLException sqle)
+        {
+            // Do nothing, default to *
+        }
+
+        return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
 
     public PreparedStatement getInsertStatement( ConnectionSupplier cs, T bean )
