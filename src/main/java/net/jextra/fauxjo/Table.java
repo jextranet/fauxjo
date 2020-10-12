@@ -164,6 +164,28 @@ public class Table<T>
         return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
 
+    public String buildBasicSelectStatement( String alias, String clause )
+    {
+        String trimmedClause = "";
+        if ( clause != null && !clause.trim().isEmpty() )
+        {
+            trimmedClause = clause;
+        }
+        String fields = "*";
+        try
+        {
+            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( beanClass );
+            String prefix = alias != null && !alias.isEmpty() ? alias + "." : "";
+            fields = prefix + String.join( ", " + prefix, beanFieldDefs.keySet() );
+            return String.format( "select %s from %s %s %s", fields, fullTableName, alias, trimmedClause );
+        }
+        catch ( SQLException sqle )
+        {
+            // Do nothing, default to *
+        }
+        return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
+    }
+
     public PreparedStatement getInsertStatement( ConnectionSupplier cs, T bean )
         throws SQLException
     {
