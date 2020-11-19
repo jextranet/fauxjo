@@ -139,6 +139,11 @@ public class Home<T extends Fauxjo>
         return table.buildBasicSelectStatement( clause );
     }
 
+    public String buildBasicSelect ( String alias, String clause )
+    {
+        return table.buildBasicSelectStatement( alias, clause );
+    }
+
     public T getFirst( ResultSet rs )
         throws SQLException
     {

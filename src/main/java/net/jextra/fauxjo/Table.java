@@ -29,6 +29,8 @@ import java.util.*;
 import net.jextra.connectionsupplier.*;
 import net.jextra.fauxjo.beandef.*;
 import net.jextra.fauxjo.coercer.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Java representation of a database table.
@@ -42,6 +44,8 @@ public class Table<T>
     private static final String TABLE_NAME = "TABLE_NAME";
     private static final String COLUMN_NAME = "COLUMN_NAME";
     private static final String DATA_TYPE = "DATA_TYPE";
+
+    private static Logger logger = LoggerFactory.getLogger(Table.class);
 
     private String fullTableName;
     private String schemaName;
@@ -159,8 +163,32 @@ public class Table<T>
         catch (SQLException sqle)
         {
             // Do nothing, default to *
+            logger.warn("Defaulting to select * due to specific select failing.");
         }
 
+        return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
+    }
+
+    public String buildBasicSelectStatement( String alias, String clause )
+    {
+        String trimmedClause = "";
+        if ( clause != null && !clause.trim().isEmpty() )
+        {
+            trimmedClause = clause;
+        }
+        String fields = "*";
+        try
+        {
+            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( beanClass );
+            String prefix = alias != null && !alias.isEmpty() ? alias + "." : "";
+            fields = prefix + String.join( ", " + prefix, beanFieldDefs.keySet() );
+            return String.format( "select %s from %s %s %s", fields, fullTableName, alias, trimmedClause );
+        }
+        catch ( SQLException sqle )
+        {
+            // Do nothing, default to *
+            logger.warn("Defaulting to select * due to specific select failing.");
+        }
         return String.format( "select %s from %s %s", fields, fullTableName, trimmedClause );
     }
 
