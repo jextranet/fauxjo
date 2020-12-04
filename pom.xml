@@ -53,8 +53,23 @@
     </licenses>
     <developers>
         <developer>
+            <id>andrewtgray</id>
+            <name>Andrew Gray</name>
+            <url>https://jextra.net</url>
+        </developer>
+        <developer>
             <id>bstevens</id>
             <name>Brian Stevens</name>
+            <url>https://jextra.net</url>
+        </developer>
+        <developer>
+            <id>jabelels</id>
+            <name>Jake Abel</name>
+            <url>https://jextra.net</url>
+        </developer>
+	<developer>
+            <id>iostream72</id>
+            <name>Stephen Blake</name>
             <url>https://jextra.net</url>
         </developer>
     </developers>
