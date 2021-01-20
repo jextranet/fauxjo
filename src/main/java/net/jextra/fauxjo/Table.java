@@ -36,10 +36,12 @@ public class Table<T>
     // Fields
     // ============================================================
 
+    private static final String SCHEMA_NAME = "TABLE_SCHEM";
     private static final String TABLE_NAME = "TABLE_NAME";
     private static final String COLUMN_NAME = "COLUMN_NAME";
     private static final String DATA_TYPE = "DATA_TYPE";
 
+    private boolean supportsGeneratedKeys;
     private Connection conn;
     private StatementCache statementCache;
     private String fullTableName;
@@ -61,6 +63,7 @@ public class Table<T>
 
     public Table( String fullTableName, Class<T> beanClass )
     {
+        supportsGeneratedKeys = true;
         this.fullTableName = fullTableName;
         String[] words = fullTableName.toLowerCase().split( "\\." );
         if ( words.length == 1 )
@@ -85,6 +88,16 @@ public class Table<T>
     // ----------
     // public
     // ----------
+
+    public boolean getSupportsGeneratedKeys()
+    {
+        return supportsGeneratedKeys;
+    }
+
+    public void setSupportsGeneratedKeys( boolean value )
+    {
+        this.supportsGeneratedKeys = value;
+    }
 
     public void setConnection( Connection conn )
         throws SQLException
@@ -140,7 +153,7 @@ public class Table<T>
         throws SQLException
     {
         InsertDef insertDef = getInsertDef( bean );
-        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
+        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
 
         setInsertValues( insStatement, insertDef, 1, bean );
         int rows = insStatement.executeUpdate();
@@ -150,14 +163,19 @@ public class Table<T>
     }
 
     /**
-     * Insert multiple beans into the database at the same time using a fast mult-row insert statement.
+     * Insert multiple beans into the database at the same time using a fast multi-row insert statement.
      */
     public int insert( Collection<T> beans )
         throws SQLException
     {
+        if ( beans == null || beans.isEmpty() )
+        {
+            return 0;
+        }
+
         InsertDef insertDef = getInsertDef( null );
         insertDef.setRowCount( beans.size() );
-        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql() );
+        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
 
         int paramIndex = 1;
         for ( T bean : beans )
@@ -172,13 +190,35 @@ public class Table<T>
         return rows;
     }
 
+    public int[] insertBatch( Collection<T> beans )
+        throws SQLException
+    {
+        if ( beans == null || beans.isEmpty() )
+        {
+            return new int[] {};
+        }
+
+        InsertDef insertDef = getInsertDef( null );
+        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+
+        for ( T bean : beans )
+        {
+            setInsertValues( insStatement, insertDef, 1, bean );
+            insStatement.addBatch();
+        }
+
+        int[] rows = insStatement.executeBatch();
+
+        return rows;
+    }
+
     /**
      * Convert the bean into an update statement and execute it.
      */
     public int update( T bean )
         throws SQLException
     {
-        PreparedStatement statement = statementCache.prepareStatement( conn, getUpdateSql() );
+        PreparedStatement statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
         setUpdateValues( statement, bean );
 
         return statement.executeUpdate();
@@ -190,7 +230,7 @@ public class Table<T>
     public boolean delete( T bean )
         throws SQLException
     {
-        PreparedStatement statement = statementCache.prepareStatement( conn, getDeleteSql() );
+        PreparedStatement statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
         setDeleteValues( statement, bean );
 
         return statement.executeUpdate() > 0;
@@ -539,19 +579,18 @@ public class Table<T>
     private void cacheColumnInfos()
         throws SQLException
     {
-        String realTableName = getRealTableName( tableName );
+        RealTableName real = getRealTableName( tableName );
 
         //
         // If the table does not actually exist optionally throw exception.
         //
-        if ( realTableName == null )
+        if ( real == null )
         {
             throw new FauxjoException( String.format( "Table %s does not exist.", fullTableName ) );
         }
 
         HashMap<String, ColumnInfo> map = new HashMap<>();
-
-        ResultSet rs = conn.getMetaData().getColumns( null, schemaName, realTableName, null );
+        ResultSet rs = conn.getMetaData().getColumns( null, real.schemaName, real.tableName, null );
         while ( rs.next() )
         {
             String realName = rs.getString( COLUMN_NAME );
@@ -568,7 +607,7 @@ public class Table<T>
     /**
      * This takes a case insensitive tableName and searches for it in the connection's meta data to find the connections case sensitive tableName.
      */
-    private String getRealTableName( String tableName )
+    private RealTableName getRealTableName( String tableName )
         throws SQLException
     {
         ArrayList<String> tableTypes = new ArrayList<>();
@@ -583,15 +622,41 @@ public class Table<T>
         }
         rs.close();
 
-        rs = conn.getMetaData().getTables( null, schemaName, null, tableTypes.toArray( new String[tableTypes.size()] ) );
+        RealTableName bean = searchForTable( tableTypes, schemaName, tableName );
+        if ( bean != null )
+        {
+            return bean;
+        }
 
+        if ( schemaName == null )
+        {
+            return null;
+        }
+
+        // Try schema all lowercase
+        bean = searchForTable( tableTypes, schemaName.toLowerCase(), tableName );
+        if ( bean != null )
+        {
+            return bean;
+        }
+
+        // Try schema all uppercase
+        return searchForTable( tableTypes, schemaName.toUpperCase(), tableName );
+    }
+
+    private RealTableName searchForTable( List<String> tableTypes, String schemaName, String tableName )
+        throws SQLException
+    {
+        ResultSet rs = conn.getMetaData().getTables( null, schemaName, null, tableTypes.toArray( new String[tableTypes.size()] ) );
         while ( rs.next() )
         {
             if ( rs.getString( TABLE_NAME ).equalsIgnoreCase( tableName ) )
             {
-                String name = rs.getString( TABLE_NAME );
+                RealTableName bean = new RealTableName();
+                bean.schemaName = rs.getString( SCHEMA_NAME );
+                bean.tableName = rs.getString( TABLE_NAME );
                 rs.close();
-                return name;
+                return bean;
             }
         }
         rs.close();
@@ -853,5 +918,11 @@ public class Table<T>
 
             return builder.toString();
         }
+    }
+
+    private static class RealTableName
+    {
+        private String schemaName;
+        private String tableName;
     }
 }

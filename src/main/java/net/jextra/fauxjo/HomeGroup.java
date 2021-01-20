@@ -77,4 +77,9 @@ public class HomeGroup
             home.setConnection( conn );
         }
     }
+
+    public Collection<Home<?>> getHomes()
+    {
+        return homes.values();
+    }
 }

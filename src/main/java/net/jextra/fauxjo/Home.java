@@ -23,7 +23,6 @@ package net.jextra.fauxjo;
 
 import java.sql.*;
 import java.util.*;
-import net.jextra.fauxjo.bean.*;
 
 /**
  * Base implementation of a data access object.
@@ -35,6 +34,7 @@ public class Home<T>
     // ============================================================
 
     private Connection conn;
+    private boolean supportsGeneratedKeys = true;
     private Table<T> table;
     private BeanBuilder<T> beanBuilder;
     private StatementCache statementCache;
@@ -83,6 +83,17 @@ public class Home<T>
     // public
     // ----------
 
+    public boolean getSupportsGeneratedKeys()
+    {
+        return supportsGeneratedKeys;
+    }
+
+    public void setSupportsGeneratedKeys( boolean supportsGeneratedKeys )
+    {
+        this.supportsGeneratedKeys = supportsGeneratedKeys;
+        table.setSupportsGeneratedKeys( supportsGeneratedKeys );
+    }
+
     public Connection getConnection()
     {
         return conn;
@@ -118,7 +129,7 @@ public class Home<T>
     public PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
-        return statementCache.prepareStatement( conn, sql );
+        return statementCache.prepareStatement( conn, sql, supportsGeneratedKeys );
     }
 
     public String getSchemaName()

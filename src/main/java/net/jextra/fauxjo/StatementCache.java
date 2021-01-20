@@ -50,14 +50,14 @@ public class StatementCache
     // public
     // ----------
 
-    public PreparedStatement prepareStatement( Connection conn, String sql )
+    public PreparedStatement prepareStatement( Connection conn, String sql, boolean supportsGeneratedKeys )
         throws SQLException
     {
         PerConnectionCache cc = getConnCache( conn );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
-            if ( SqlInspector.isInsertStatement( sql ) )
+            if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( sql ) )
             {
                 statement = conn.prepareStatement( sql, Statement.RETURN_GENERATED_KEYS );
             }
