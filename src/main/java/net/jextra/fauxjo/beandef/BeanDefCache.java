@@ -55,29 +55,15 @@ public class BeanDefCache
     public static Map<String, FieldDef> getFieldDefs( Class<?> fauxjoClass )
         throws FauxjoException
     {
-        try
-        {
-            BeanDef beanDef = getBeanDef( fauxjoClass );
-
-            return beanDef.getFieldDefs();
-        }
-        catch ( Exception ex )
-        {
-            if ( ex instanceof FauxjoException )
-            {
-                throw (FauxjoException) ex;
-            }
-
-            throw new FauxjoException( ex );
-        }
+        return getBeanDef( fauxjoClass ).getFieldDefs();
     }
 
-    public static BeanDef getBeanDef( Class<?> fauxjoClass )
+    public static BeanDef getBeanDef( Class<?> beanClass )
         throws FauxjoException
     {
         try
         {
-            BeanDef beanDef = beanDefCache.get( fauxjoClass );
+            BeanDef beanDef = beanDefCache.get( beanClass );
             if ( beanDef != null )
             {
                 return beanDef;
@@ -88,24 +74,31 @@ public class BeanDefCache
             //
             beanDef = new BeanDef();
 
-            for ( Field field : getFauxjoFields( fauxjoClass ) )
+            for ( Field field : buildFauxjoFields( beanClass ) )
             {
                 FauxjoField ann = field.getAnnotation( FauxjoField.class );
-                String key = ann.value();
+                String key = ann.value().toLowerCase();
 
-                FieldDef fieldDef = beanDef.addField( key, field );
+                FieldDef fieldDef = beanDef.getFieldDef( key );
+                if ( fieldDef != null )
+                {
+                    throw new FauxjoException( "Field for key[" + key + "] is already defined" );
+                }
+
+                fieldDef = new FieldDef();
+                fieldDef.setField( field );
                 fieldDef.setDefaultable( ann.defaultable() );
 
-                //
                 // Check if FauxjoPrimaryKey.
-                //
                 if ( field.isAnnotationPresent( FauxjoPrimaryKey.class ) )
                 {
                     fieldDef.setPrimaryKey( true );
                 }
+
+                beanDef.addFieldDef( key, fieldDef );
             }
 
-            BeanInfo info = Introspector.getBeanInfo( fauxjoClass );
+            BeanInfo info = Introspector.getBeanInfo( beanClass );
             for ( PropertyDescriptor prop : info.getPropertyDescriptors() )
             {
                 if ( prop.getWriteMethod() != null )
@@ -115,14 +108,15 @@ public class BeanDefCache
                     {
                         String key = ann.value();
 
-                        Field field = beanDef.getField( key );
-                        if ( field != null )
+                        FieldDef fieldDef = beanDef.getFieldDef( key );
+                        if ( fieldDef != null )
                         {
-                            throw new FauxjoException(
-                                "FauxjoSetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]" );
+                            throw new FauxjoException( "FauxjoSetter defined on method where a FauxjoField already is defined for key[" + key + "]" );
                         }
 
-                        beanDef.addWriteMethod( key, prop.getWriteMethod() );
+                        fieldDef = new FieldDef();
+                        fieldDef.setWriteMethod( prop.getWriteMethod() );
+                        beanDef.addFieldDef( key, fieldDef );
                     }
                 }
 
@@ -133,28 +127,28 @@ public class BeanDefCache
                     {
                         String key = ann.value();
 
-                        Field field = beanDef.getField( key );
-                        if ( field != null )
+                        FieldDef fieldDef = beanDef.getFieldDef( key );
+                        if ( fieldDef != null )
                         {
-                            throw new FauxjoException(
-                                "FauxjoGetter defined on method where a FauxjoField " + "already defines the link to the column [" + key + "]" );
+                            throw new FauxjoException( "FauxjoGetter defined on method where a FauxjoField already defined for key[" + key + "]" );
                         }
 
-                        beanDef.addReadMethod( key, prop.getReadMethod() );
+                        fieldDef = new FieldDef();
+                        fieldDef.setReadMethod( prop.getReadMethod() );
 
-                        //
                         // Check if FauxjoPrimaryKey.
-                        //
                         if ( prop.getReadMethod().isAnnotationPresent( FauxjoPrimaryKey.class ) )
                         {
                             beanDef.getFieldDef( key ).setPrimaryKey( true );
                         }
+
+                        beanDef.addFieldDef( key, fieldDef );
                     }
                 }
             }
 
-            // Put in cacche
-            beanDefCache.put( fauxjoClass, beanDef );
+            // Put in cache
+            beanDefCache.put( beanClass, beanDef );
 
             return beanDef;
         }
@@ -165,7 +159,7 @@ public class BeanDefCache
                 throw (FauxjoException) ex;
             }
 
-            throw new FauxjoException( ex );
+            throw new FauxjoException( "Unable to get BeanDef for [" + beanClass + "]", ex );
         }
     }
 
@@ -173,17 +167,16 @@ public class BeanDefCache
     // private
     // ----------
 
-    private static Collection<Field> getFauxjoFields( Class<?> cls )
+    private static Collection<Field> buildFauxjoFields( Class<?> cls )
     {
-        ArrayList<Field> list = new ArrayList<Field>();
-
+        ArrayList<Field> list = new ArrayList<>();
         if ( cls == null )
         {
             return list;
         }
 
         // Add super-classes fields first.
-        list.addAll( getFauxjoFields( cls.getSuperclass() ) );
+        list.addAll( buildFauxjoFields( cls.getSuperclass() ) );
 
         for ( Field field : cls.getDeclaredFields() )
         {

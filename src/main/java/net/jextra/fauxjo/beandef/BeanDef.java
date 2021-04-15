@@ -21,9 +21,7 @@
 
 package net.jextra.fauxjo.beandef;
 
-import java.lang.reflect.*;
 import java.util.*;
-import net.jextra.fauxjo.*;
 
 /**
  * Represents the result of processing the annotations on the Fauxjo bean class.
@@ -55,45 +53,24 @@ public class BeanDef
     // public
     // ----------
 
-    public FieldDef addField( String key, Field field )
-        throws FauxjoException
+    public FieldDef getFieldDef( String key )
     {
-        final FieldDef fieldDef = getFieldDef( key );
-        fieldDef.setField( field );
-        return fieldDef;
+        if ( key == null )
+        {
+            return null;
+        }
+
+        return fieldDefs.get( key.toLowerCase() );
     }
 
-    public Field getField( String key )
+    public void addFieldDef( String key, FieldDef def )
     {
-        return getFieldDef( key ).getField();
-    }
-
-    public void addReadMethod( String key, Method method )
-        throws FauxjoException
-    {
-        getFieldDef( key ).setReadMethod( method );
-    }
-
-    public Method getReadMethod( String key )
-    {
-        return getFieldDef( key ).getReadMethod();
-    }
-
-    public void addWriteMethod( String key, Method method )
-        throws FauxjoException
-    {
-        getFieldDef( key ).setWriteMethod( method );
-    }
-
-    public Method getWriteMethod( String key )
-    {
-        return getFieldDef( key ).getWriteMethod();
+        fieldDefs.put( key.toLowerCase(), def );
     }
 
     public Map<String, FieldDef> getFieldDefs()
     {
         TreeMap<String, FieldDef> map = new TreeMap<>();
-
         for ( String key : fieldDefs.keySet() )
         {
             map.put( key, getFieldDef( key ) );
@@ -102,7 +79,11 @@ public class BeanDef
         return map;
     }
 
-    public FieldDef getFieldDef( String key )
+    // ----------
+    // private
+    // ----------
+
+    private FieldDef getFieldDef2( String key )
     {
         FieldDef def = fieldDefs.get( key.toLowerCase() );
         if ( def == null )

@@ -58,6 +58,14 @@ public class BigDecimalCoercer implements TypeCoercer<BigDecimal>
         {
             return value.toBigInteger();
         }
+        else if ( targetClass.equals( Float.class ) )
+        {
+            return value.floatValue();
+        }
+        else if ( targetClass.equals( Double.class ) )
+        {
+            return value.doubleValue();
+        }
 
         throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );
     }

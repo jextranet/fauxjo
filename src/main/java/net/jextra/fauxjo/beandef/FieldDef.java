@@ -41,11 +41,6 @@ public class FieldDef
     // Constructors
     // ============================================================
 
-    public Field getField()
-    {
-        return field;
-    }
-
     // ============================================================
     // Methods
     // ============================================================
@@ -54,11 +49,17 @@ public class FieldDef
     // public
     // ----------
 
+    public Field getField()
+    {
+        return field;
+    }
+
     public void setField( Field field )
         throws FauxjoException
     {
         this.field = field;
 
+        // Calculate the valueClass from the field.
         if ( valueClass == null )
         {
             valueClass = field.getType();
@@ -82,6 +83,7 @@ public class FieldDef
     {
         this.writeMethod = writeMethod;
 
+        // Calculate the valueClass from the write method.
         if ( valueClass == null )
         {
             valueClass = writeMethod.getParameterTypes()[0];
@@ -106,6 +108,7 @@ public class FieldDef
     {
         this.readMethod = readMethod;
 
+        // Calculate the valueClass from the read method.
         if ( valueClass == null )
         {
             valueClass = readMethod.getReturnType();
@@ -133,11 +136,6 @@ public class FieldDef
     public Class<?> getValueClass()
     {
         return valueClass;
-    }
-
-    public void setValueClass( Class<?> valueClass )
-    {
-        this.valueClass = valueClass;
     }
 
     public boolean isDefaultable()

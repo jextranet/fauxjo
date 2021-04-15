@@ -40,11 +40,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
 
     private Class<T> beanClass;
     private Coercer coercer;
-    private boolean allowMissingColumns;
-
-    // Key = Lowercase column name (in code known as the "key").
-    // Value = Information about the bean property.
-    private Map<String, FieldDef> fieldDefs;
+    private boolean allowMissingFields;
     private boolean autoCloseResultSet;
 
     // ============================================================
@@ -71,14 +67,14 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
     // public
     // ----------
 
-    public boolean getAllowMissingColumns()
+    public boolean getAllowMissingFields()
     {
-        return allowMissingColumns;
+        return allowMissingFields;
     }
 
-    public void setAllowMissingColumns( boolean allowMissingColumns )
+    public void setAllowMissingFields( boolean allowMissingFields )
     {
-        this.allowMissingColumns = allowMissingColumns;
+        this.allowMissingFields = allowMissingFields;
     }
 
     public boolean getAutoCloseResultSet()
@@ -148,7 +144,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
     }
 
     /**
-     * WARNING: This classes the passed in ResultSet.
+     * WARNING: This consumes the passed in ResultSet.
      */
     public List<T> getList( ResultSet rs )
         throws SQLException
@@ -174,7 +170,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
     }
 
     /**
-     * WARNING: This classes the passed in ResultSet.
+     * WARNING: This consumes the passed in ResultSet.
      */
     public Set<T> getSet( ResultSet rs )
         throws SQLException
@@ -220,33 +216,34 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
     }
 
     public T buildBean( ResultSet rs )
-        throws SQLException
+        throws FauxjoException
     {
         try
         {
             ResultSetMetaData meta = rs.getMetaData();
             int columnCount = meta.getColumnCount();
 
-            Map<String, Object> record = new HashMap<>();
+            Map<String, Object> values = new HashMap<>();
             for ( int i = 1; i <= columnCount; i++ )
             {
-                if ( meta.getColumnType( i ) == java.sql.Types.ARRAY )
+                // Arrays are special and need to be extracted with a special call.
+                if ( meta.getColumnType( i ) == Types.ARRAY )
                 {
-                    Array array = rs.getArray( i );
+                    Array a = rs.getArray( i );
                     Object actualArray = null;
-                    if ( array != null )
+                    if ( a != null )
                     {
-                        actualArray = array.getArray();
+                        actualArray = a.getArray();
                     }
-                    record.put( meta.getColumnName( i ).toLowerCase(), actualArray );
+                    values.put( meta.getColumnName( i ).toLowerCase(), actualArray );
                 }
                 else
                 {
-                    record.put( meta.getColumnName( i ).toLowerCase(), rs.getObject( i ) );
+                    values.put( meta.getColumnName( i ).toLowerCase(), rs.getObject( i ) );
                 }
             }
 
-            return buildBean( record );
+            return buildBean( values );
         }
         catch ( Exception ex )
         {
@@ -263,8 +260,8 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
     // protected
     // ----------
 
-    protected T buildBean( Map<String, Object> record )
-        throws SQLException
+    protected T buildBean( Map<String, Object> values )
+        throws FauxjoException
     {
         T bean;
 
@@ -277,18 +274,23 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
             throw new FauxjoException( ex );
         }
 
-        Map<String, FieldDef> fieldDefs = new HashMap<>( getFieldDefs() );
-        for ( String key : record.keySet() )
+        Map<String, FieldDef> fieldDefs = BeanDefCache.getFieldDefs( beanClass );
+
+        // Collect field keys so that they can be checked off.
+        Set<String> keys = new HashSet<>();
+        keys.addAll( fieldDefs.keySet() );
+
+        for ( String key : values.keySet() )
         {
             FieldDef fieldDef = fieldDefs.get( key );
 
-            // Remove key from fieldDefs in order to take inventory to check later that all were used.
-            fieldDefs.remove( key );
+            // Remove key from set in order to take inventory to check later that all were used.
+            keys.remove( key );
 
-            // If column in database but not in bean, assumed OK, ignore.
+            // If the column is in the database but not in bean, assumed OK, ignore.
             if ( fieldDef != null )
             {
-                Object value = record.get( key );
+                Object value = values.get( key );
 
                 try
                 {
@@ -308,21 +310,35 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
         }
 
         // If any of the columns was not accounted for, throw an Exception
-        if ( !allowMissingColumns && !fieldDefs.isEmpty() )
+        if ( !allowMissingFields && !keys.isEmpty() )
         {
-            throw new FauxjoException(
-                "Missing column [" + fieldDefs.keySet().iterator().next() + "] in ResultSet for fauxjo [" + beanClass.getCanonicalName() + "]" );
+            StringBuilder builder = new StringBuilder();
+            for ( String key : keys )
+            {
+                if ( builder.length() > 0 )
+                {
+                    builder.append( "," );
+                }
+                builder.append( key );
+            }
+
+            throw new FauxjoException( String.format( "Missing field/s [%s] in fauxjo [%s]", builder, beanClass.getCanonicalName() ) );
         }
 
         return bean;
     }
 
-    protected void setBeanValue( T bean, String key, Object value )
+    protected boolean setBeanValue( T bean, String key, Object value )
         throws FauxjoException
     {
         BeanDef beanDef = BeanDefCache.getBeanDef( beanClass );
+        FieldDef fieldDef = beanDef.getFieldDef( key );
+        if ( fieldDef == null )
+        {
+            return false;
+        }
 
-        Field field = beanDef.getField( key );
+        Field field = fieldDef.getField();
         if ( field != null )
         {
             try
@@ -330,7 +346,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
                 field.setAccessible( true );
                 field.set( bean, value );
 
-                return;
+                return true;
             }
             catch ( Exception ex )
             {
@@ -338,7 +354,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
             }
         }
 
-        Method writeMethod = beanDef.getWriteMethod( key );
+        Method writeMethod = fieldDef.getWriteMethod();
         if ( writeMethod != null )
         {
             try
@@ -350,16 +366,7 @@ public class BeanBuilder<T> implements ResultSetIterator.Builder<T>
                 throw new FauxjoException( "Unable to invoke write method [" + writeMethod.getName() + "]", ex );
             }
         }
-    }
 
-    protected Map<String, FieldDef> getFieldDefs()
-        throws FauxjoException
-    {
-        if ( fieldDefs == null )
-        {
-            fieldDefs = BeanDefCache.getFieldDefs( beanClass );
-        }
-
-        return fieldDefs;
+        return true;
     }
 }

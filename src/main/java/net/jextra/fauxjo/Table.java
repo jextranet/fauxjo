@@ -318,23 +318,6 @@ public class Table<T>
             Object coercedValue = coercer.convertTo( value.getValue(), SqlTypeMapping.getJavaClass( value.getSqlType() ) );
             statement.setObject( paramIndex, coercedValue, value.getSqlType() );
 
-            /* if ( value.getSqlType() == java.sql.Types.ARRAY )
-            {
-                if ( value.getValue() == null )
-                {
-                    statement.setNull( propIndex, value.getSqlType() );
-                }
-                else
-                {
-                    Array array = statement.getConnection().createArrayOf( getTypeName( value.getValue() ), (Object[]) value.getValue() );
-                    statement.setArray( propIndex, array );
-                }
-            }
-            else
-            {
-                statement.setObject( propIndex, value.getValue(), value.getSqlType() );
-            }*/
-
             paramIndex++;
         }
 
@@ -508,22 +491,6 @@ public class Table<T>
             {
                 Object coercedValue = coercer.convertTo( val, SqlTypeMapping.getJavaClass( sqlType ) );
                 insStatement.setObject( paramIndex, coercedValue, sqlType );
-
-                /*if ( sqlType == Types.ARRAY )
-                {
-                    Array array = statement.getConnection().createArrayOf( getTypeName( val ), (Object[]) val );
-                    statement.setArray( paramIndex, array );
-                }
-                // TODO
-                else if ( val instanceof Instant )
-                {
-                    statement.setObject( paramIndex, Timestamp.from( (Instant) val ), sqlType );
-                }
-                else
-                {
-                    Object coercedValue = coercer.convertTo( val, SQLTypeMapping.getJavaClass( sqlType ) );
-                    statement.setObject( paramIndex, coercedValue, sqlType );
-                }*/
             }
 
             paramIndex++;
@@ -689,8 +656,13 @@ public class Table<T>
         try
         {
             BeanDef beanDef = BeanDefCache.getBeanDef( bean.getClass() );
+            FieldDef fieldDef = beanDef.getFieldDef( key );
+            if ( fieldDef == null )
+            {
+                throw new FauxjoException( "Unable to find FieldDef [" + key + "]" );
+            }
 
-            Field field = beanDef.getField( key );
+            Field field = fieldDef.getField();
             if ( field != null )
             {
                 field.setAccessible( true );
@@ -698,7 +670,7 @@ public class Table<T>
                 return field.get( bean );
             }
 
-            Method readMethod = beanDef.getReadMethod( key );
+            Method readMethod = fieldDef.getReadMethod();
             if ( readMethod != null )
             {
                 return readMethod.invoke( bean );
@@ -714,83 +686,50 @@ public class Table<T>
             throw new FauxjoException( ex );
         }
 
-        return null;
+        throw new FauxjoException( "Unable to find FieldDef [" + key + "]" );
     }
 
-    private void setBeanValue( T bean, String key, Object value )
+    private boolean setBeanValue( T bean, String key, Object value )
         throws FauxjoException
     {
-        try
+        BeanDef beanDef = BeanDefCache.getBeanDef( bean.getClass() );
+        FieldDef fieldDef = beanDef.getFieldDef( key );
+        if ( fieldDef == null )
         {
-            BeanDef beanDef = BeanDefCache.getBeanDef( bean.getClass() );
+            return false;
+        }
 
-            Field field = beanDef.getField( key );
-            if ( field != null )
+        Field field = fieldDef.getField();
+        if ( field != null )
+        {
+            try
             {
-                try
-                {
-                    field.setAccessible( true );
-                    field.set( bean, value );
+                field.setAccessible( true );
+                field.set( bean, value );
 
-                    return;
-                }
-                catch ( Exception ex )
-                {
-                    throw new FauxjoException( "Unable to write to field [" + field.getName() + "]", ex );
-                }
+                return true;
             }
-
-            Method writeMethod = beanDef.getWriteMethod( key );
-            if ( writeMethod != null )
+            catch ( Exception ex )
             {
-                try
-                {
-                    writeMethod.invoke( bean, value );
-                }
-                catch ( Exception ex )
-                {
-                    throw new FauxjoException( "Unable to invoke write method [" + writeMethod.getName() + "]", ex );
-                }
+                throw new FauxjoException( "Unable to write to field [" + field.getName() + "]", ex );
             }
         }
-        catch ( Exception ex )
-        {
-            if ( ex instanceof FauxjoException )
-            {
-                throw (FauxjoException) ex;
-            }
 
-            throw new FauxjoException( ex );
+        Method writeMethod = fieldDef.getWriteMethod();
+        if ( writeMethod != null )
+        {
+            try
+            {
+                writeMethod.invoke( bean, value );
+            }
+            catch ( Exception ex )
+            {
+                throw new FauxjoException( "Unable to invoke write method [" + writeMethod.getName() + "]", ex );
+            }
         }
+
+        return true;
     }
-
-    //    private String getTypeName( Object val )
-    //    {
-    //        String typeName = "varchar";
-    //        Class klass = val.getClass().getComponentType();
-    //        if ( klass == UUID.class )
-    //        {
-    //            typeName = "uuid";
-    //        }
-    //        else if ( klass == Date.class || klass == java.util.Date.class )
-    //        {
-    //            typeName = "timestamptz";
-    //        }
-    //        else if ( klass == Integer.class )
-    //        {
-    //            typeName = "int";
-    //        }
-    //        else if ( klass == Double.class )
-    //        {
-    //            typeName = "float8";
-    //        }
-    //        else if ( klass == Boolean.class )
-    //        {
-    //            typeName = "boolean";
-    //        }
-    //
-    //        return typeName;
-    //    }
 
     // ============================================================
     // Inner Classes
