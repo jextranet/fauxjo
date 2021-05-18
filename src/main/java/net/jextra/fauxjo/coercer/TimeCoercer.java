@@ -21,10 +21,11 @@
 
 package net.jextra.fauxjo.coercer;
 
+import java.sql.*;
 import java.time.*;
 import net.jextra.fauxjo.*;
 
-public class IntegerCoercer implements TypeCoercer<Integer>
+public class TimeCoercer implements TypeCoercer<Time>
 {
     // ============================================================
     // Methods
@@ -35,34 +36,16 @@ public class IntegerCoercer implements TypeCoercer<Integer>
     // ----------
 
     @Override
-    public Object convertTo( Integer value, Class<?> targetClass )
+    public Object convertTo( Time value, Class<?> targetClass )
         throws FauxjoException
     {
-        if ( targetClass.equals( Byte.class ) )
+        if ( targetClass.equals( LocalTime.class ) )
         {
-            assert value <= Byte.MAX_VALUE && value >= Byte.MIN_VALUE;
-            return value.byteValue();
-        }
-        else if ( targetClass.equals( Short.class ) )
-        {
-            assert value <= Short.MAX_VALUE && value >= Short.MIN_VALUE;
-            return value.shortValue();
+            return value.toLocalTime();
         }
         else if ( targetClass.equals( Long.class ) )
         {
-            return value.longValue();
-        }
-        else if ( targetClass.equals( Float.class ) )
-        {
-            return (float) value;
-        }
-        else if ( targetClass.equals( Double.class ) )
-        {
-            return (double) value;
-        }
-        else if ( targetClass.equals( ZoneOffset.class ) )
-        {
-            return ZoneOffset.ofTotalSeconds( value );
+            return value.getTime();
         }
         else if ( targetClass.equals( String.class ) )
         {
@@ -71,5 +54,4 @@ public class IntegerCoercer implements TypeCoercer<Integer>
 
         throw new FauxjoException( String.format( ERROR_MSG, getClass().getName(), targetClass ) );
     }
-
 }

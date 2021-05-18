@@ -59,6 +59,10 @@ public class DateCoercer implements TypeCoercer<Date>
         {
             return value.toInstant();
         }
+        else if ( targetClass.equals( Long.class ) )
+        {
+            return value.getTime();
+        }
         else if ( targetClass.equals( String.class ) )
         {
             return value.toInstant().toString();
