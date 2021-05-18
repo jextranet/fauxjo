@@ -67,6 +67,14 @@ public class StringCoercer implements TypeCoercer<String>
         {
             return Timestamp.valueOf( value );
         }
+        else if ( targetClass.equals( ZoneId.class ) )
+        {
+            return ZoneId.of( value );
+        }
+        else if ( targetClass.equals( ZoneOffset.class ) )
+        {
+            return ZoneOffset.of( value );
+        }
         else if ( targetClass.equals( Instant.class ) )
         {
             return Timestamp.valueOf( value ).toInstant();
