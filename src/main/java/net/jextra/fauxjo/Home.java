@@ -37,6 +37,7 @@ public class Home<T>
     private boolean supportsGeneratedKeys = true;
     private Table<T> table;
     private BeanBuilder<T> beanBuilder;
+    private boolean usePreparedStatementCache = true;
     private StatementCache statementCache;
 
     // ============================================================
@@ -83,15 +84,29 @@ public class Home<T>
     // public
     // ----------
 
+    public boolean getUsePreparedStatementCache()
+    {
+        return usePreparedStatementCache;
+    }
+
+    public Home<T> setUsePreparedStatementCache( boolean value )
+    {
+        usePreparedStatementCache = value;
+
+        return this;
+    }
+
     public boolean getSupportsGeneratedKeys()
     {
         return supportsGeneratedKeys;
     }
 
-    public void setSupportsGeneratedKeys( boolean supportsGeneratedKeys )
+    public Home<T> setSupportsGeneratedKeys( boolean supportsGeneratedKeys )
     {
         this.supportsGeneratedKeys = supportsGeneratedKeys;
         table.setSupportsGeneratedKeys( supportsGeneratedKeys );
+
+        return this;
     }
 
     public Connection getConnection()
@@ -129,6 +144,21 @@ public class Home<T>
     public PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
+        if ( !usePreparedStatementCache )
+        {
+            PreparedStatement statement = null;
+            if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( sql ) )
+            {
+                statement = conn.prepareStatement( sql, Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                statement = conn.prepareStatement( sql );
+            }
+
+            return statement;
+        }
+
         return statementCache.prepareStatement( conn, sql, supportsGeneratedKeys );
     }
 
