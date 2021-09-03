@@ -23,24 +23,48 @@ package net.jextra.fauxjo;
 
 import java.lang.reflect.*;
 import java.sql.*;
+import java.text.*;
 import java.util.*;
+import java.util.concurrent.*;
 
+/**
+ * Caches PreparedStatements and CallableStatements per Connection, local to the Thread.<p>
+ *
+ * If using a modern jdbc driver that caches Statements (PG, Oracle, or MySQL) consider
+ * disabling this via its Home object, drivers cache Statements better.
+ *
+ * Bottom-up, the containment hiearchy is as follows:<ul>
+ * <li>A StmtCache (StatementCache.PerConnectionCache) is an LRU cache
+ *     storing PreparedStatement or CallableStatements by their sql.</li>
+ * <li>A StmtCacheMap is created if not exists from calls to prepareStatement
+ *     or prepareCall and holds StmtCaches by their Connection key.</li>
+ * <li>StmtCacheMap is a type of the static ThreadLocal created at startup
+ *     so each thread gets its own StmtCacheMap.</li>
+ * </ul>
+ *
+ * StmtCache guards against ever-changing PreparedStatement sql (not using params) by
+ * evicting the LRU entry per call if StmtCache is full or entry has expired.
+ *
+ * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">Let drivers cache PreparedStatements</a>
+ * @see StatementCacheListener
+ * @see #getConnKey(Connection)
+ */
 public class StatementCache
 {
+
+    public enum CacheType { Home, Table };
+
     // ============================================================
     // Fields
     // ============================================================
 
-    private ThreadLocal<Map<Connection, PerConnectionCache>> cache;
-
-    // ============================================================
-    // Constructors
-    // ============================================================
-
-    public StatementCache()
-    {
-        cache = new ThreadLocal<>();
-    }
+    //Instead of Connection, use Connection.hashcode in a Long to support wrapped Connecctions.
+    //Using a Long allows callers to create their own hash if their use case could create collisions.
+    private static final ThreadLocal<Map<Long, PerConnectionCache>> cache = new ThreadLocal<>();
+    private CacheType cacheType;
+    private List<StatementCacheListener> listeners = new ArrayList<>();
+    private long perConCache_MaxEntries = 1000L; //guard against ever-changing prep/call statements
+    private long perConCache_MaxTtl = TimeUnit.MINUTES.toMillis(30);
 
     // ============================================================
     // Methods
@@ -50,10 +74,66 @@ public class StatementCache
     // public
     // ----------
 
+    public CacheType getCacheType() {
+        return cacheType;
+    }
+
+    public StatementCache setCacheType( CacheType cacheType )
+    {
+        this.cacheType = cacheType;
+        return this;
+    }
+
+    /**
+     * Return maximum time for a Statement to live in the Connection cache (default is 30 minutes).
+     * Guard against Statements that concatenate instead of use params.
+     */
+    public long getPerConCache_MaxTtl() {
+        return perConCache_MaxTtl;
+    }
+
+    public void setPerConCache_MaxTtl( Long perConCache_MaxTtl )
+    {
+        if(perConCache_MaxTtl != null) this.perConCache_MaxTtl = perConCache_MaxTtl;
+    }
+
+    /**
+     * Return maximum number of Statements allowed in the Connections cache (default is 1000).
+     * Guard against Statements that concatenate instead of use params.
+     */
+    public long getPerConCache_MaxEntries()
+    {
+        return perConCache_MaxEntries;
+    }
+
+    public void setPerConCache_MaxEntries( Long perConCache_MaxEntries )
+    {
+        if(perConCache_MaxEntries != null) this.perConCache_MaxEntries = perConCache_MaxEntries;
+    }
+
+    /**
+     * Set perConCache maximums.
+     * @param perConCache_MaxEntries maximum number of Statements allowed in the Connections cache (default is 1000)
+     * @param perConCache_MaxTtl maximum time for a Statement to live in the Connection cache (default is 30 minutes)
+     */
+    public void setPerConCache_Maximums( Integer perConCache_MaxEntries, Long perConCache_MaxTtl)
+    {
+        if(perConCache_MaxEntries != null)
+        {
+            this.perConCache_MaxEntries = perConCache_MaxEntries;
+            for(StatementCacheListener l : listeners) l.setStmtCacheMaxEntries(cacheType, Thread.currentThread(), perConCache_MaxEntries);
+        }
+        if(perConCache_MaxTtl != null)
+        {
+            this.perConCache_MaxTtl = perConCache_MaxTtl;
+            for(StatementCacheListener l : listeners) l.setStmtCacheMaxTtl(cacheType, Thread.currentThread(), perConCache_MaxTtl);
+        }
+    }
+
     public PreparedStatement prepareStatement( Connection conn, String sql, boolean supportsGeneratedKeys )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
@@ -67,6 +147,9 @@ public class StatementCache
             }
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -75,13 +158,16 @@ public class StatementCache
     public PreparedStatement prepareStatement( Connection conn, String sql, int resultSetType, int resultSetConcurrency )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
             statement = conn.prepareStatement( sql, resultSetType, resultSetConcurrency );
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -90,13 +176,16 @@ public class StatementCache
     public PreparedStatement prepareStatement( Connection conn, String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
             statement = conn.prepareStatement( sql, resultSetType, resultSetConcurrency, resultSetHoldability );
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -105,13 +194,16 @@ public class StatementCache
     public PreparedStatement prepareStatement( Connection conn, String sql, int autoGeneratedKeys )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
             statement = conn.prepareStatement( sql, autoGeneratedKeys );
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -120,13 +212,16 @@ public class StatementCache
     public PreparedStatement prepareStatement( Connection conn, String sql, int[] columnIndexes )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
             statement = conn.prepareStatement( sql, columnIndexes );
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -135,13 +230,16 @@ public class StatementCache
     public PreparedStatement prepareStatement( Connection conn, String sql, String[] columnNames )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         PreparedStatement statement = cc.getPreparedStatement( sql );
         if ( statement == null || statement.isClosed() )
         {
             statement = conn.prepareStatement( sql, columnNames );
 
             statement = cc.setPreparedStatement( sql, statement );
+            for(StatementCacheListener l : listeners) l.preparedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return statement;
@@ -150,13 +248,16 @@ public class StatementCache
     public CallableStatement prepareCall( Connection conn, String sql )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         CallableStatement call = cc.getPreparedCall( sql );
         if ( call == null || call.isClosed() )
         {
             call = conn.prepareCall( sql );
 
             call = cc.setPreparedCall( sql, call );
+            for(StatementCacheListener l : listeners) l.preparedCall(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return call;
@@ -165,13 +266,16 @@ public class StatementCache
     public CallableStatement prepareCall( Connection conn, String sql, int resultSetType, int resultSetConcurrenc )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         CallableStatement call = cc.getPreparedCall( sql );
         if ( call == null || call.isClosed() )
         {
             call = conn.prepareCall( sql );
 
             call = cc.setPreparedCall( sql, call );
+            for(StatementCacheListener l : listeners) l.preparedCall(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return call;
@@ -180,13 +284,16 @@ public class StatementCache
     public CallableStatement prepareCall( Connection conn, String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability )
         throws SQLException
     {
-        PerConnectionCache cc = getConnCache( conn );
+        PerConnectionCache cc = getConnCache( conn, sql  );
         CallableStatement call = cc.getPreparedCall( sql );
         if ( call == null || call.isClosed() )
         {
             call = conn.prepareCall( sql, resultSetType, resultSetConcurrency, resultSetHoldability );
 
             call = cc.setPreparedCall( sql, call );
+            for(StatementCacheListener l : listeners) l.preparedCall(cacheType, Thread.currentThread(), cc.getConnectionKey());
+        } else {
+            for(StatementCacheListener l : listeners) l.reusedStmt(cacheType, Thread.currentThread(), cc.getConnectionKey());
         }
 
         return call;
@@ -200,25 +307,27 @@ public class StatementCache
             return false;
         }
 
-        Map<Connection, PerConnectionCache> map = cache.get();
+        Map<Long, PerConnectionCache> map = cache.get();
         if ( map == null )
         {
             return false;
         }
 
+        Long connKey = StatementCache.getConnKey( conn );
         boolean workDone = false;
-        PerConnectionCache cc = map.get( conn );
+        PerConnectionCache cc = map.get( connKey );
         if ( cc != null )
         {
             workDone = cc.clear();
-            map.remove( conn );
+            map.remove( connKey );
+            for(StatementCacheListener l: listeners) l.clearedStmtCacheForConn(cacheType, Thread.currentThread(), connKey);
         }
 
         return workDone;
     }
 
     /**
-     * Closes and removes all PreparedStatements and PreparedCalls for the active Thread.
+     * Closes and removes all Listeners, PreparedStatements and PreparedCalls for the active Thread.
      *
      * @return true if any actual work was done and false if there was nothing to remove (most likely already closed).
      */
@@ -226,43 +335,109 @@ public class StatementCache
         throws SQLException
     {
         boolean workDone = false;
-        Map<Connection, PerConnectionCache> map = cache.get();
+
+        Map<Long, PerConnectionCache> map = cache.get();
         if ( map != null )
         {
-            for ( PerConnectionCache cc : map.values() )
+            for ( Long connK : map.keySet().toArray(new Long[1]) ) //avoid concurrentModification via array
             {
-                if ( cc.clear() )
+                PerConnectionCache cc = map.get( connK );
+                if ( cc != null && cc.clear() )
                 {
+                    for(StatementCacheListener l: listeners) l.clearedStmtCacheForConn( cacheType, Thread.currentThread(), connK);
                     workDone = true;
                 }
             }
         }
         cache.remove();
-
+        for(StatementCacheListener l: listeners) l.clearedStmtCacheMapForThread( cacheType, Thread.currentThread());
+        listeners.clear();
         return workDone;
+    }
+
+    /* Enable logging and aid diagnosing affinity of cache, thread, connection and its sql statements. */
+    public void addListener(StatementCacheListener listener)
+    {
+        if(listener != null) listeners.add(listener);
+    }
+    public boolean removeListener(StatementCacheListener listener)
+    {
+        return (listener == null ? false : listeners.remove(listener));
+    }
+    public void removeAllListeners()
+    {
+        listeners.clear();
+    }
+    public StatementCacheListener[] getListeners()
+    {
+        return listeners.toArray(new StatementCacheListener[1]);
+    }
+
+    /**
+     * If connection is cached, append its contents to the string builder as csv rows.
+     * @param conn represented by the cache
+     * @param sb will have cache entries appended
+     */
+    public void getDiagnosticCsv(Connection conn, StringBuilder sb) throws Exception
+    {
+        Long connKey = StatementCache.getConnKey( conn );
+
+        Map<Long, PerConnectionCache> map = cache.get();
+        if ( map != null && map.get( connKey ) != null)
+        {
+            map.get( connKey ).getStatementCacheCsvForPrepStmts(sb);
+        }
     }
 
     // ----------
     // private
     // ----------
 
-    private PerConnectionCache getConnCache( Connection conn )
+    /**
+     * If no cache exists for this thread, creates it. Unwraps the Connection and
+     * if not in the map, puts it in a new PerConnectionCache keyed to the unwrapped connection.
+     * Using an always-new wrapped connection from a pool as cache key will leak memory.
+     * @param conn is a real database Connection or a Connection wrapping a real one such as from a pool.
+     * @param sql to be used in the returned PerConnectionCache (but is not added by this).
+     */
+    private PerConnectionCache getConnCache( Connection conn, String sql)
+        throws SQLException
     {
-        Map<Connection, PerConnectionCache> map = cache.get();
+        Map<Long, PerConnectionCache> map = cache.get();
+
         if ( map == null )
         {
             map = new WeakHashMap<>();
             cache.set( map );
+            for(StatementCacheListener l: listeners) l.newStmtCacheMapForNewThread( cacheType, Thread.currentThread() );
         }
 
-        PerConnectionCache cc = map.get( conn );
+        Long connK = StatementCache.getConnKey( conn );
+        PerConnectionCache cc = map.get( connK );
         if ( cc == null )
         {
-            cc = new PerConnectionCache();
-            map.put( conn, cc );
+            cc = new PerConnectionCache(connK);
+            map.put( connK, cc );
+            for(StatementCacheListener l: listeners) l.newStmtCacheForNewConn( cacheType, Thread.currentThread(), connK, sql );
         }
 
         return cc;
+    }
+
+    /**
+     * Return the Long key to be used for caching the Stmt
+     * conn.getMetaData().getConnection().hashCode() in case conn is a new pooled wrapper connection.
+     * Using an always-new wrapped connection from a pool like Hikari as a cache key will leak memory.
+     *
+     * @param conn used to create its cache key
+     */
+    public static Long getConnKey(Connection conn) throws SQLException
+    {
+        if(conn == null || conn.getMetaData() == null) throw new SQLException("getConnKey failed, connection or metadata was null");
+        if(conn.getMetaData().getURL() == null) throw new SQLException("getConnKey failed, connection metadata URL was null");
+        long key = conn.getMetaData().getConnection().hashCode(); //Get real connection in case conn is a new pooled wrapper connection.
+
+        return key;
     }
 
     // ============================================================
@@ -341,20 +516,94 @@ public class StatementCache
         void closeWrapped();
     }
 
+    /* Thin wrapper with entryDate to determine age/expiry. */
+    private class PerConnectionCacheEntry<T extends Statement>
+    {
+        private T statement;
+        private long entryDate;
+        private long accessCn = 1L;
+        public PerConnectionCacheEntry(T statement)
+        {
+            entryDate = System.currentTimeMillis();
+            this.statement = statement;
+        }
+
+        public T getStatement()
+        {
+            accessCn++;
+            return statement;
+        }
+        public void setStatement( T statement )
+        {
+            this.statement = statement;
+        }
+
+        public long getEntryDate()
+        {
+            return entryDate;
+        }
+        public void setEntryDate( long entryDate )
+        {
+            this.entryDate = entryDate;
+        }
+        public long getAgeMillis(long now)
+        {
+            return now - entryDate;
+        }
+        public long getAccessCn()
+        {
+            return accessCn;
+        }
+    }
+
     private class PerConnectionCache
     {
-        private HashMap<String, PreparedStatement> preparedStatements;
-        private HashMap<String, CallableStatement> preparedCalls;
+        private LruPrepStmt preparedStatementsLruCache;
+        private LruCallableStmt callableStatementsLruCache;
+        private Long connectionKey;
 
-        public PerConnectionCache()
+        public PerConnectionCache(Long connectionKey)
         {
-            preparedStatements = new HashMap<>();
-            preparedCalls = new HashMap<>();
+            this.connectionKey = connectionKey;
+             preparedStatementsLruCache = new LruPrepStmt (1 << 4, 0.75f, true)
+             { //ctor 16, 0.75 are HashMap defaults, initialCapcity must be power of two
+
+                 @Override //LinkedHashMap removes the eldestEntry if it is expired or the LRU is full.
+                 protected boolean removeEldestEntry(Map.Entry<String,PerConnectionCacheEntry<PreparedStatement>> eldest)
+                 {
+                     if(size() > perConCache_MaxEntries ) doRemoveLru(eldest, StatementCacheListener.EvictType.MaxEntries);
+                     else if ( eldest.getValue().getAgeMillis( System.currentTimeMillis() ) > perConCache_MaxTtl )
+                     {
+                         doRemoveLru( eldest, StatementCacheListener.EvictType.MaxTtl );
+                     }
+                     return false;
+                 }
+             };
+
+             callableStatementsLruCache = new LruCallableStmt(1 << 4, 0.75f, true)
+             { //ctor 16, 0.75 are HashMap defaults, initialCapcity must be power of two
+
+                 @Override //LinkedHashMap removes the eldestEntry if it is expired or the LRU is full.
+                 protected boolean removeEldestEntry(Map.Entry<String,PerConnectionCacheEntry<CallableStatement>> eldest)
+                 {
+                     if(size() > perConCache_MaxEntries ) doRemoveLru(eldest, StatementCacheListener.EvictType.MaxEntries);
+                     else if(eldest.getValue().getAgeMillis(System.currentTimeMillis()) > perConCache_MaxTtl )
+                     {
+                         doRemoveLru(eldest, StatementCacheListener.EvictType.MaxTtl);
+                     }
+                     return false; //this handled the removal, do not return true per the spec
+                 }
+             };
+        }
+
+        public Long getConnectionKey() {
+            return connectionKey;
         }
 
         public PreparedStatement getPreparedStatement( String sql )
         {
-            return preparedStatements.get( sql );
+            PerConnectionCacheEntry<PreparedStatement> pse = preparedStatementsLruCache.get( sql );
+            return (pse != null ? pse.getStatement() : null);
         }
 
         public PreparedStatement setPreparedStatement( String sql, PreparedStatement statement )
@@ -363,14 +612,15 @@ public class StatementCache
                 .newProxyInstance( getClass().getClassLoader(), new Class[] { PreparedStatement.class, ProxyCloser.class },
                     new WrappedPreparedStatement( statement ) );
 
-            preparedStatements.put( sql, proxyStatement );
+            preparedStatementsLruCache.put( sql, new PerConnectionCacheEntry<>(proxyStatement) );
 
             return proxyStatement;
         }
 
         public CallableStatement getPreparedCall( String sql )
         {
-            return preparedCalls.get( sql );
+            PerConnectionCacheEntry<CallableStatement> cse = callableStatementsLruCache.get( sql );
+            return (cse != null ? cse.getStatement() : null);
         }
 
         public CallableStatement setPreparedCall( String sql, CallableStatement statement )
@@ -379,7 +629,7 @@ public class StatementCache
                 .newProxyInstance( CallableStatement.class.getClassLoader(), new Class[] { CallableStatement.class, ProxyCloser.class },
                     new WrappedPreparedStatement( statement ) );
 
-            preparedCalls.put( sql, proxyCall );
+            callableStatementsLruCache.put( sql, new PerConnectionCacheEntry<>(proxyCall) );
 
             return proxyCall;
         }
@@ -388,37 +638,173 @@ public class StatementCache
             throws SQLException
         {
             boolean workDone = false;
-            for ( PreparedStatement statement : preparedStatements.values() )
+            for ( PerConnectionCacheEntry<PreparedStatement> prepStmtEntry : preparedStatementsLruCache.values() )
             {
-                if ( statement == null )
+                if ( prepStmtEntry != null && prepStmtEntry.getStatement() != null && !prepStmtEntry.getStatement().isClosed() )
+                {
+                    ( (ProxyCloser) prepStmtEntry.getStatement() ).closeWrapped(); //badams
+                    workDone = true;
+                }
+            }
+            preparedStatementsLruCache.clear();
+
+            for ( PerConnectionCacheEntry<CallableStatement> callableStmtEntry : callableStatementsLruCache.values() )
+            {
+                if ( callableStmtEntry == null )
                 {
                     continue;
                 }
 
-                if ( !statement.isClosed() )
+                if ( !callableStmtEntry.getStatement().isClosed() )
                 {
-                    ( (ProxyCloser) statement ).closeWrapped();
+                    ( (ProxyCloser) callableStmtEntry.getStatement() ).closeWrapped();
                     workDone = true;
                 }
             }
-            preparedStatements.clear();
-
-            for ( CallableStatement call : preparedCalls.values() )
-            {
-                if ( call == null )
-                {
-                    continue;
-                }
-
-                if ( !call.isClosed() )
-                {
-                    ( (ProxyCloser) call ).closeWrapped();
-                    workDone = true;
-                }
-            }
-            preparedCalls.clear();
+            callableStatementsLruCache.clear();
 
             return workDone;
         }
+
+        public int getPreparedStatementEntryCn()
+        {
+            return preparedStatementsLruCache.size();
+        }
+
+        public int getCallableStatementEntryCn()
+        {
+            return callableStatementsLruCache.size();
+        }
+
+        private void getStatementCacheCsvForPrepStmts(StringBuilder sb) throws Exception
+        {
+            String[] keys = new String[1];
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-yy HH:mm:ss");
+            preparedStatementsLruCache.keySet().toArray(keys); //build list w/o concurrent modification
+            PerConnectionCacheEntry<PreparedStatement> entry;
+            sb.append("accessedCn,created,sql");
+            for(String k: keys)
+            {
+                if((entry = preparedStatementsLruCache.get( k )) == null) continue;
+                sb.append(entry.getAccessCn()).append(",");
+                sb.append(sdf.format(new java.util.Date(entry.getEntryDate())));
+                sb.append(",\"").append(k.replace( '\n', ' ' )).append("\"\n");
+            }
+        }
+
     }
+
+    private class LruPrepStmt extends LinkedHashMap<String,PerConnectionCacheEntry<PreparedStatement>>
+    {
+        /**
+         * Constructs an empty {@code LinkedHashMap} instance with the
+         * specified initial capacity, load factor and ordering mode.
+         *
+         * @param  initialCapacity the initial capacity
+         * @param  loadFactor      the load factor
+         * @param  accessOrder     the ordering mode - {@code true} for
+         *         access-order, {@code false} for insertion-order
+         * @throws IllegalArgumentException if the initial capacity is negative
+         *         or the load factor is nonpositive
+         */
+        public LruPrepStmt(int initialCapacity, float loadFactor, boolean accessOrder)
+        {
+            super(initialCapacity, loadFactor, accessOrder);
+        }
+
+         /** * Remove the entry from the map and attempt to close its Statement. */
+         public void doRemoveLru(
+             Map.Entry<String,PerConnectionCacheEntry<PreparedStatement>> eldest, StatementCacheListener.EvictType evictType
+             ) {
+             StatementCacheListener.StmtType stmtType = StatementCacheListener.StmtType.Prepared;
+             remove(eldest);
+             try {
+                 if(eldest != null && eldest.getValue() != null && !eldest.getValue().getStatement().isClosed())
+                 {
+                     eldest.getValue().getStatement().close();
+                 }
+                 if(evictType == StatementCacheListener.EvictType.MaxEntries)
+                 {
+                     for ( StatementCacheListener l : listeners ) {
+                         l.evictedLruStmt_MaxEntries(
+                             cacheType, stmtType, eldest.getKey(), eldest.getValue().getEntryDate(),
+                             eldest.getValue().getAccessCn(), perConCache_MaxEntries
+                         );
+                     }
+                 }
+                 else if(evictType == StatementCacheListener.EvictType.MaxTtl)
+                 {
+                     for ( StatementCacheListener l : listeners )
+                     {
+                         l.evictedLruStmt_MaxTtl(
+                             cacheType, stmtType, eldest.getKey(),
+                             eldest.getValue().getEntryDate(), eldest.getValue().getAccessCn(), perConCache_MaxTtl
+                         );
+                    }
+                 }
+             }
+             catch(SQLException x)
+             {
+                for ( StatementCacheListener l : listeners ) l.evictLruStmtException(cacheType, stmtType, x);
+             }
+         }
+    }
+
+    private class LruCallableStmt extends LinkedHashMap<String,PerConnectionCacheEntry<CallableStatement>>
+    {
+        /**
+         * Constructs an empty {@code LinkedHashMap} instance with the
+         * specified initial capacity, load factor and ordering mode.
+         *
+         * @param  initialCapacity the initial capacity
+         * @param  loadFactor      the load factor
+         * @param  accessOrder     the ordering mode - {@code true} for
+         *         access-order, {@code false} for insertion-order
+         * @throws IllegalArgumentException if the initial capacity is negative
+         *         or the load factor is nonpositive
+         */
+        public LruCallableStmt(int initialCapacity, float loadFactor, boolean accessOrder)
+        {
+            super(initialCapacity, loadFactor, accessOrder);
+        }
+
+         /** * Remove the entry from the map and attempt to close its Statement. */
+         public void doRemoveLru(
+             Map.Entry<String,PerConnectionCacheEntry<CallableStatement>> eldest,
+             StatementCacheListener.EvictType evictType
+             ) {
+             StatementCacheListener.StmtType stmtType = StatementCacheListener.StmtType.Callable;
+             remove(eldest);
+             try {
+                 if(eldest != null && eldest.getValue() != null && !eldest.getValue().getStatement().isClosed()) {
+                     eldest.getValue().getStatement().close();
+                 }
+                 if(evictType == StatementCacheListener.EvictType.MaxEntries)
+                 {
+                     for ( StatementCacheListener l : listeners ) {
+                         l.evictedLruStmt_MaxEntries(
+                             cacheType, stmtType, eldest.getKey(), eldest.getValue().getEntryDate(),
+                             eldest.getValue().getAccessCn(), perConCache_MaxEntries
+                         );
+                     }
+                 }
+                 else if(evictType == StatementCacheListener.EvictType.MaxTtl)
+                 {
+                     for ( StatementCacheListener l : listeners )
+                     {
+                         l.evictedLruStmt_MaxTtl(
+                             cacheType, stmtType, eldest.getKey(),
+                             eldest.getValue().getEntryDate(), eldest.getValue().getAccessCn(), perConCache_MaxTtl
+                         );
+                    }
+                 }
+             }
+             catch(SQLException x)
+             {
+                for ( StatementCacheListener l : listeners ) l.evictLruStmtException(cacheType, stmtType, x);
+             }
+         }
+    }
+
 }
+
