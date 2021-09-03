@@ -190,8 +190,8 @@ public class Home<T>
             table.setConnection( conn );
             return false; //do not clear the statementCache.
         }
-        Long connkey = StatementCache.getConnKey( conn );
-        if(this.connKey != null && connkey.longValue() == this.connKey.longValue())
+        Long cnKy = StatementCache.getConnKey( conn );
+        if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
         {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             table.setConnection( conn );
@@ -205,7 +205,7 @@ public class Home<T>
         }
 
         this.conn = conn;
-        this.connKey = connkey;
+        this.connKey = cnKy;
         table.setConnection( conn );
         if (conn != null )
         {

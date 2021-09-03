@@ -313,14 +313,14 @@ public class StatementCache
             return false;
         }
 
-        Long connKey = StatementCache.getConnKey( conn );
+        Long cnKy = StatementCache.getConnKey( conn );
         boolean workDone = false;
-        PerConnectionCache cc = map.get( connKey );
+        PerConnectionCache cc = map.get( cnKy );
         if ( cc != null )
         {
             workDone = cc.clear();
-            map.remove( connKey );
-            for(StatementCacheListener l: listeners) l.clearedStmtCacheForConn(cacheType, Thread.currentThread(), connKey);
+            map.remove( cnKy );
+            for(StatementCacheListener l: listeners) l.clearedStmtCacheForConn(cacheType, Thread.currentThread(), cnKy);
         }
 
         return workDone;
@@ -380,12 +380,12 @@ public class StatementCache
      */
     public void getDiagnosticCsv(Connection conn, StringBuilder sb) throws Exception
     {
-        Long connKey = StatementCache.getConnKey( conn );
+        Long cnKy = StatementCache.getConnKey( conn );
 
         Map<Long, PerConnectionCache> map = cache.get();
-        if ( map != null && map.get( connKey ) != null)
+        if ( map != null && map.get( cnKy ) != null)
         {
-            map.get( connKey ).getStatementCacheCsvForPrepStmts(sb);
+            map.get( cnKy ).getStatementCacheCsvForPrepStmts(sb);
         }
     }
 
@@ -412,13 +412,13 @@ public class StatementCache
             for(StatementCacheListener l: listeners) l.newStmtCacheMapForNewThread( cacheType, Thread.currentThread() );
         }
 
-        Long connK = StatementCache.getConnKey( conn );
-        PerConnectionCache cc = map.get( connK );
+        Long cnKy = StatementCache.getConnKey( conn );
+        PerConnectionCache cc = map.get( cnKy );
         if ( cc == null )
         {
-            cc = new PerConnectionCache(connK);
-            map.put( connK, cc );
-            for(StatementCacheListener l: listeners) l.newStmtCacheForNewConn( cacheType, Thread.currentThread(), connK, sql );
+            cc = new PerConnectionCache(cnKy);
+            map.put( cnKy, cc );
+            for(StatementCacheListener l: listeners) l.newStmtCacheForNewConn( cacheType, Thread.currentThread(), cnKy, sql );
         }
 
         return cc;

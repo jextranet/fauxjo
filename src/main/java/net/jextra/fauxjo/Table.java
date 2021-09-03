@@ -161,8 +161,8 @@ public class Table<T>
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             return false; //do not clear the statementCache.
         }
-        Long connkey = StatementCache.getConnKey( conn );
-        if(this.connKey != null && connkey.longValue() == this.connKey.longValue())
+        Long cnKy = StatementCache.getConnKey( conn );
+        if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
         {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             return true; //If same Connection reuse it. Do not clear the statementCache.
@@ -175,7 +175,7 @@ public class Table<T>
         }
 
         this.conn = conn;
-        this.connKey = connkey;
+        this.connKey = cnKy;
         if (conn != null )
         {
             statementCache = new StatementCache().setCacheType(StatementCache.CacheType.Home);
