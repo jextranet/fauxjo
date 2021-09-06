@@ -43,7 +43,9 @@ public class Table<T>
 
     private boolean supportsGeneratedKeys;
     private Connection conn;
+    private Long connKey;
     private StatementCache statementCache;
+    private boolean stmtCacheEnabled;
     private String fullTableName;
     private String schemaName;
     private String tableName;
@@ -56,6 +58,10 @@ public class Table<T>
 
     private String updateSql;
     private String deleteSql;
+
+    private List<StatementCacheListener> listeners;
+    private Integer perConCache_MaxEntries;
+    private Long perConCache_MaxTtl;
 
     // ============================================================
     // Constructors
@@ -99,20 +105,84 @@ public class Table<T>
         this.supportsGeneratedKeys = value;
     }
 
-    public void setConnection( Connection conn )
+    /**
+     * Sets the StatementCache enabled (default) if true.<p>
+     *
+     * StatementCaching is enabled by default to avoid breaking changes but should
+     * be disabled when using a modern jdbc driver. Per the Hikari author who has
+     * deep domain expertise in statement caching, nobody can cache statements better
+     * than the jdbc driver. Of the 5 most popular rdbms, only Microsoft SQLServer
+     * jdbc driver does not fully support transparent, driver-side statement caching.
+     * @param enabled should be set prior to setConnection
+     * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">https://github.com/brettwooldridge/HikariCP/issues/488</a>
+     */
+    public Table setStatementCacheEnabled(boolean enabled) {
+        this.stmtCacheEnabled = enabled;
+        return this;
+    }
+
+    /**
+     * Sets configuration passed to StatementCache if it is or becomes enabled.<p>
+     *
+     * Enables logging and aids diagnosing affinity of cache, thread, connection and its sql statements.
+     * @param listeners to receive key StatementCache events
+     * @param perConCache_MaxEntries max Statements cached per Connection prevents sql concatenation leaks (default is 1000 entries)
+     * @param perConCache_MaxTtl max time millis a Statement is cached per Connection prevents sql concatenation (default is 30 minutes)
+     * @see #setConnection(Connection)
+     */
+    public Table setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCache_MaxEntries, Long perConCache_MaxTtl)
+    {
+        this.listeners = listeners;
+        this.perConCache_MaxEntries = perConCache_MaxEntries;
+        this.perConCache_MaxTtl = perConCache_MaxTtl;
+        if(statementCache != null)
+        {
+            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
+            statementCache.setPerConCache_Maximums( perConCache_MaxEntries, perConCache_MaxTtl );
+        }
+        return this;
+    }
+
+    /**
+     * Return true if stmtCache is enabled and the Connection is the same as last.<p>
+     *
+     * Otherwise, clears the StatementCache and creates a new StatementCache.
+     * The internal connection reference is set for both cases because conn may be a
+     * Connection facade such as if from HikariCP.getConnection.
+     * net.jextra.fauxjo.StatementCache#getConnKey(Connection) is used to determine
+     * if conn is the same as the last one set.
+     * @param conn may be a real db Connection or one wrapped in a Connection facade
+     * @see net.jextra.fauxjo.StatementCache#getConnKey(Connection)
+     */
+    public boolean setConnection( Connection conn )
         throws SQLException
     {
-        if ( statementCache != null )
+        if(!stmtCacheEnabled) {
+            this.conn = conn; //Update conn in case it is a new connection wrapper.
+            return false; //do not clear the statementCache.
+        }
+        Long cnKy = StatementCache.getConnKey( conn );
+        if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
+        {
+            this.conn = conn; //Update conn in case it is a new connection wrapper.
+            return true; //If same Connection reuse it. Do not clear the statementCache.
+        }
+
+        //Is a new unique Connection so release all resources
+        if (statementCache != null )
         {
             statementCache.clear();
-            statementCache = null;
         }
 
         this.conn = conn;
-        if ( conn != null )
+        this.connKey = cnKy;
+        if (conn != null )
         {
-            statementCache = new StatementCache();
+            statementCache = new StatementCache().setCacheType(StatementCache.CacheType.Home);
+            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
+            statementCache.setPerConCache_Maximums( perConCache_MaxEntries, perConCache_MaxTtl );
         }
+        return false;
     }
 
     public String getSchemaName()
@@ -153,8 +223,19 @@ public class Table<T>
         throws SQLException
     {
         InsertDef insertDef = getInsertDef( bean );
-        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
-
+        PreparedStatement insStatement = null;
+        if( stmtCacheEnabled && statementCache != null)
+        {
+            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+        }
+        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+        }
+        else
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+        }
         setInsertValues( insStatement, insertDef, 1, bean );
         int rows = insStatement.executeUpdate();
         retrieveGeneratedKeys( insStatement, insertDef, bean );
@@ -175,7 +256,19 @@ public class Table<T>
 
         InsertDef insertDef = getInsertDef( null );
         insertDef.setRowCount( beans.size() );
-        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+        PreparedStatement insStatement = null;
+        if( stmtCacheEnabled && statementCache != null)
+        {
+            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+        }
+        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+        }
+        else
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+        }
 
         int paramIndex = 1;
         for ( T bean : beans )
@@ -199,7 +292,19 @@ public class Table<T>
         }
 
         InsertDef insertDef = getInsertDef( null );
-        PreparedStatement insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+        PreparedStatement insStatement = null;
+        if( stmtCacheEnabled && statementCache != null)
+        {
+            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+        }
+        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+        }
+        else
+        {
+            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+        }
 
         for ( T bean : beans )
         {
@@ -218,7 +323,18 @@ public class Table<T>
     public int update( T bean )
         throws SQLException
     {
-        PreparedStatement statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
+        PreparedStatement statement = null;
+        if( stmtCacheEnabled && statementCache != null) {
+            statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
+        }
+        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getUpdateSql() ) )
+        {
+            statement = conn.prepareStatement( getUpdateSql(), Statement.RETURN_GENERATED_KEYS );
+        }
+        else
+        {
+            statement = conn.prepareStatement( getUpdateSql() );
+        }
         setUpdateValues( statement, bean );
 
         return statement.executeUpdate();
@@ -230,7 +346,18 @@ public class Table<T>
     public boolean delete( T bean )
         throws SQLException
     {
-        PreparedStatement statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
+        PreparedStatement statement = null;
+        if( stmtCacheEnabled && statementCache != null) {
+            statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
+        }
+        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getDeleteSql() ) )
+        {
+            statement = conn.prepareStatement( getDeleteSql(), Statement.RETURN_GENERATED_KEYS );
+        }
+        else
+        {
+            statement = conn.prepareStatement( getDeleteSql() );
+        }
         setDeleteValues( statement, bean );
 
         return statement.executeUpdate() > 0;
@@ -399,6 +526,20 @@ public class Table<T>
             statement.setObject( paramIndex, coercedValue, value.getSqlType() );
             paramIndex++;
         }
+    }
+
+    /**
+     * Append the contents of the StatementCache for the current Connection.
+     * @param sb will have cache entries appended
+     */
+    public void getStatementCacheCsvForPrepStmts(StringBuilder sb)
+        throws Exception
+    {
+        if( stmtCacheEnabled && statementCache != null)
+        {
+            statementCache.getDiagnosticCsv( conn, sb );
+        }
+        throw new SQLException("stmtCacheEnabled is false");
     }
 
     // ----------
