@@ -45,7 +45,7 @@ public class Table<T>
     private Connection conn;
     private Long connKey;
     private StatementCache statementCache;
-    private boolean stmtCacheEnabled;
+    private boolean stmtCacheEnabled = true;
     private String fullTableName;
     private String schemaName;
     private String tableName;
@@ -106,7 +106,7 @@ public class Table<T>
     }
 
     /**
-     * Sets the StatementCache enabled (default) if true.<p>
+     * Enable (default) or disable the StatementCache.<p>
      *
      * StatementCaching is enabled by default to avoid breaking changes but should
      * be disabled when using a modern jdbc driver. Per the Hikari author who has
@@ -114,12 +114,19 @@ public class Table<T>
      * than the jdbc driver. Of the 5 most popular rdbms, only Microsoft SQLServer
      * jdbc driver does not fully support transparent, driver-side statement caching.
      * @param enabled should be set prior to setConnection
+     * @see Home for a detailed description
      * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">https://github.com/brettwooldridge/HikariCP/issues/488</a>
      */
     public Table setStatementCacheEnabled(boolean enabled) {
         this.stmtCacheEnabled = enabled;
         return this;
     }
+
+    /** * Return true if the StatementCache is enabled (default). */
+    public boolean getStatementCacheEnabled() {
+        return stmtCacheEnabled;
+    }
+
 
     /**
      * Sets configuration passed to StatementCache if it is or becomes enabled.<p>
@@ -159,7 +166,7 @@ public class Table<T>
     {
         if(!stmtCacheEnabled) {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
-            return false; //do not clear the statementCache.
+            return false;
         }
         Long cnKy = StatementCache.getConnKey( conn );
         if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
@@ -217,34 +224,48 @@ public class Table<T>
     }
 
     /**
-     * Convert the bean into an insert statement and execute it.
+     * Convert the bean into an insert statement and execute it.<p>
+     *
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
+     * @param bean to insert
      */
     public int insert( T bean )
         throws SQLException
     {
         InsertDef insertDef = getInsertDef( bean );
         PreparedStatement insStatement = null;
-        if( stmtCacheEnabled && statementCache != null)
+        int rows;
+        boolean cachedStm = false;
+        try
         {
-            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            {
+                insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+            }
+            setInsertValues( insStatement, insertDef, 1, bean );
+            rows = insStatement.executeUpdate();
+            retrieveGeneratedKeys( insStatement, insertDef, bean );
         }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+        finally
         {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+            if( insStatement != null && !cachedStm ) insStatement.close();
         }
-        else
-        {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
-        }
-        setInsertValues( insStatement, insertDef, 1, bean );
-        int rows = insStatement.executeUpdate();
-        retrieveGeneratedKeys( insStatement, insertDef, bean );
-
         return rows;
     }
 
     /**
      * Insert multiple beans into the database at the same time using a fast multi-row insert statement.
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
      */
     public int insert( Collection<T> beans )
         throws SQLException
@@ -257,32 +278,49 @@ public class Table<T>
         InsertDef insertDef = getInsertDef( null );
         insertDef.setRowCount( beans.size() );
         PreparedStatement insStatement = null;
-        if( stmtCacheEnabled && statementCache != null)
+        int rows;
+        boolean cachedStm = false;
+        try
         {
-            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
-        }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
-        {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
-        }
-        else
-        {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
-        }
+            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            {
+                insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+            }
 
-        int paramIndex = 1;
-        for ( T bean : beans )
-        {
-            paramIndex = setInsertValues( insStatement, insertDef, paramIndex, bean );
+            int paramIndex = 1;
+            for ( T bean : beans )
+            {
+                paramIndex = setInsertValues( insStatement, insertDef, paramIndex, bean );
+            }
+
+            rows = insStatement.executeUpdate();
+            // TODO -- not sure how to deal with generated keys in a multi-insert
+            //        retrieveGeneratedKeys( insertDef, bean );
         }
-
-        int rows = insStatement.executeUpdate();
-        // TODO -- not sure how to deal with generated keys in a multi-insert
-        //        retrieveGeneratedKeys( insertDef, bean );
-
+        finally
+        {
+            if( insStatement != null && !cachedStm ) insStatement.close(); //boolean cachedStm = false;
+        }
         return rows;
     }
 
+    /**
+     * Return the result of preparedStatement.executeBatch.
+     * Insert multiple beans into the database at the same time using a fast multi-row insert statement.
+     *
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
+     * @param beans to insert
+     * @see PreparedStatement#executeBatch()
+     */
     public int[] insertBatch( Collection<T> beans )
         throws SQLException
     {
@@ -293,74 +331,109 @@ public class Table<T>
 
         InsertDef insertDef = getInsertDef( null );
         PreparedStatement insStatement = null;
-        if( stmtCacheEnabled && statementCache != null)
+        int[] rows = null;
+        boolean cachedStm = false;
+        try
         {
-            insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
-        }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
-        {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
-        }
-        else
-        {
-            insStatement = conn.prepareStatement( insertDef.getInsertSql() );
-        }
+            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            {
+                insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( insertDef.getInsertSql() ) )
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                insStatement = conn.prepareStatement( insertDef.getInsertSql() );
+            }
 
-        for ( T bean : beans )
-        {
-            setInsertValues( insStatement, insertDef, 1, bean );
-            insStatement.addBatch();
+            for ( T bean : beans )
+            {
+                setInsertValues( insStatement, insertDef, 1, bean );
+                insStatement.addBatch();
+            }
+
+            rows = insStatement.executeBatch();
         }
-
-        int[] rows = insStatement.executeBatch();
-
+        finally
+        {
+            if( insStatement != null && !cachedStm ) insStatement.close();
+        }
         return rows;
     }
 
     /**
-     * Convert the bean into an update statement and execute it.
+     * Convert the bean into an update statement and execute it.<p>
+     *
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
      */
     public int update( T bean )
         throws SQLException
     {
         PreparedStatement statement = null;
-        if( stmtCacheEnabled && statementCache != null) {
-            statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
-        }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getUpdateSql() ) )
+        int rows;
+        boolean cachedStm = false;
+        try
         {
-            statement = conn.prepareStatement( getUpdateSql(), Statement.RETURN_GENERATED_KEYS );
+            if( (cachedStm = stmtCacheEnabled && statementCache != null) ) {
+                statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getUpdateSql() ) )
+            {
+                statement = conn.prepareStatement( getUpdateSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                statement = conn.prepareStatement( getUpdateSql() );
+            }
+            setUpdateValues( statement, bean );
+            rows = statement.executeUpdate();
         }
-        else
+        finally
         {
-            statement = conn.prepareStatement( getUpdateSql() );
+            if( statement != null && !cachedStm ) statement.close();
         }
-        setUpdateValues( statement, bean );
 
-        return statement.executeUpdate();
+        return rows;
     }
 
     /**
-     * Convert the bean into an delete statement and execute it.
+     * Convert the bean into an delete statement and execute it.<p>
+     *
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
      */
     public boolean delete( T bean )
         throws SQLException
     {
         PreparedStatement statement = null;
-        if( stmtCacheEnabled && statementCache != null) {
-            statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
-        }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getDeleteSql() ) )
+        boolean deletedAtLeast1row;
+        boolean cachedStm = false;
+        try
         {
-            statement = conn.prepareStatement( getDeleteSql(), Statement.RETURN_GENERATED_KEYS );
-        }
-        else
-        {
-            statement = conn.prepareStatement( getDeleteSql() );
-        }
-        setDeleteValues( statement, bean );
+            if( (cachedStm = stmtCacheEnabled && statementCache != null) ) {
+                statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getDeleteSql() ) )
+            {
+                statement = conn.prepareStatement( getDeleteSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                statement = conn.prepareStatement( getDeleteSql() );
+            }
+            setDeleteValues( statement, bean );
 
-        return statement.executeUpdate() > 0;
+            deletedAtLeast1row = statement.executeUpdate() > 0;
+        }
+        finally
+        {
+            if( statement != null && !cachedStm ) statement.close();
+        }
+
+        return deletedAtLeast1row;
     }
 
     public String getUpdateSql()
@@ -648,22 +721,29 @@ public class Table<T>
             return;
         }
 
-        ResultSet rs = insStatement.getGeneratedKeys();
-        if ( rs.next() )
+        ResultSet rs = null;
+        try
         {
-            Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( bean.getClass() );
-            for ( String key : insertDef.getGeneratedKeys() )
+            rs = insStatement.getGeneratedKeys();
+            if ( rs.next() )
             {
-                Object value = rs.getObject( key );
-                if ( value != null )
+                Map<String, FieldDef> beanFieldDefs = BeanDefCache.getFieldDefs( bean.getClass() );
+                for ( String key : insertDef.getGeneratedKeys() )
                 {
-                    FieldDef fieldDef = beanFieldDefs.get( key );
-                    value = coercer.convertTo( value, fieldDef.getValueClass() );
+                    Object value = rs.getObject( key );
+                    if ( value != null )
+                    {
+                        FieldDef fieldDef = beanFieldDefs.get( key );
+                        value = coercer.convertTo( value, fieldDef.getValueClass() );
+                    }
+                    setBeanValue( bean, key, value );
                 }
-                setBeanValue( bean, key, value );
             }
         }
-        rs.close();
+        finally
+        {
+            if( rs != null ) rs.close();
+        }
     }
 
     // ----------
@@ -698,15 +778,20 @@ public class Table<T>
         }
 
         HashMap<String, ColumnInfo> map = new HashMap<>();
-        ResultSet rs = conn.getMetaData().getColumns( null, real.schemaName, real.tableName, null );
-        while ( rs.next() )
-        {
-            String realName = rs.getString( COLUMN_NAME );
-            Integer type = rs.getInt( DATA_TYPE );
+        ResultSet rs = null;
+        try {
+            rs = conn.getMetaData().getColumns(null, real.schemaName, real.tableName, null);
+            while (rs.next()) {
+                String realName = rs.getString(COLUMN_NAME);
+                Integer type = rs.getInt(DATA_TYPE);
 
-            map.put( realName.toLowerCase(), new ColumnInfo( realName, type ) );
+                map.put(realName.toLowerCase(), new ColumnInfo(realName, type));
+            }
         }
-        rs.close();
+        finally
+        {
+            if( rs != null ) rs.close();
+        }
 
         // Only set field if all went well
         columnInfos = map;
@@ -719,17 +804,22 @@ public class Table<T>
         throws SQLException
     {
         ArrayList<String> tableTypes = new ArrayList<>();
-
-        ResultSet rs = conn.getMetaData().getTableTypes();
-        while ( rs.next() )
+        ResultSet rs = null;
+        try
         {
-            if ( rs.getString( 1 ).toLowerCase().contains( "table" ) )
+            rs = conn.getMetaData().getTableTypes();
+            while ( rs.next() )
             {
-                tableTypes.add( rs.getString( 1 ) );
+                if ( rs.getString( 1 ).toLowerCase().contains( "table" ) )
+                {
+                    tableTypes.add( rs.getString( 1 ) );
+                }
             }
         }
-        rs.close();
-
+        finally
+        {
+            if( rs != null ) rs.close();
+        }
         RealTableName bean = searchForTable( tableTypes, schemaName, tableName );
         if ( bean != null )
         {
@@ -755,19 +845,25 @@ public class Table<T>
     private RealTableName searchForTable( List<String> tableTypes, String schemaName, String tableName )
         throws SQLException
     {
-        ResultSet rs = conn.getMetaData().getTables( null, schemaName, null, tableTypes.toArray( new String[tableTypes.size()] ) );
-        while ( rs.next() )
+        ResultSet rs = null;
+        try
         {
-            if ( rs.getString( TABLE_NAME ).equalsIgnoreCase( tableName ) )
+            rs = conn.getMetaData().getTables( null, schemaName, null, tableTypes.toArray( new String[tableTypes.size()] ) );
+            while ( rs.next() )
             {
-                RealTableName bean = new RealTableName();
-                bean.schemaName = rs.getString( SCHEMA_NAME );
-                bean.tableName = rs.getString( TABLE_NAME );
-                rs.close();
-                return bean;
+                if ( rs.getString( TABLE_NAME ).equalsIgnoreCase( tableName ) )
+                {
+                    RealTableName bean = new RealTableName();
+                    bean.schemaName = rs.getString( SCHEMA_NAME );
+                    bean.tableName = rs.getString( TABLE_NAME );
+                    return bean;
+                }
             }
         }
-        rs.close();
+        finally
+        {
+            if( rs != null ) rs.close();
+        }
 
         return null;
     }
