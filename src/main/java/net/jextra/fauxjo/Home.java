@@ -27,8 +27,10 @@ import java.util.*;
 /**
  * Base implementation of a data access object.<p>
  *
- * If using a jdbc driver with Statement caching (e.g. PG, Oracle, MySQL), consider
- * calling setStatementCacheEnabled(false). If using HikariCP, set these properties:<ul>
+ * If using a jdbc driver with Statement caching (e.g. PG, Oracle, MySQL) or for
+ * fine-grain control over memory use, consider calling setStatementCacheEnabled(false)
+ * and closing Connections and their Statements with try-resource or finally.
+ * If using HikariCP, set these properties:<ul>
  * <li>minimumIdle: set to count of services concurrently using this Home X 2.
  * <li>maximumPoolSize: set at least 2X larger than minIdleCount or db process count.
  * <li>idleTimeout: 600000 (millisec), max time before HikariCP evicts idle connections.</ul><p>
@@ -37,7 +39,7 @@ import java.util.*;
  * For Postgresql (PG), set socketTimeout to greater of 2-3X the longest query or 30 sec.</q><p>
  *
  * PG docs: <q>If reading from the server takes longer than this value, the connection is closed.</q>
- * An easy way configure PG socketTimeout when using HikariCP is to use Hikari idleTimeout (in seconds):
+ * An easy way configure PG socketTimeout when using HikariCP is to use its idleTimeout (in seconds):
  * <pre>hikariConf.addDataSourceProperty("socketTimeout", idleTimeout/1000)</pre><p>
  *
  * Hikari recovery notes (after network outage or RDS failover):
@@ -63,7 +65,7 @@ public class Home<T>
     private List<StatementCacheListener> listeners;
     private Integer perConCache_MaxEntries;
     private Long perConCache_MaxTtl;
-    private boolean stmtCacheEnabled;
+    private boolean stmtCacheEnabled = true;
 
     // ============================================================
     // Constructors
@@ -114,25 +116,35 @@ public class Home<T>
         return supportsGeneratedKeys;
     }
 
-    public void setSupportsGeneratedKeys( boolean supportsGeneratedKeys )
+    public Home<T> setSupportsGeneratedKeys( boolean supportsGeneratedKeys )
     {
         this.supportsGeneratedKeys = supportsGeneratedKeys;
         table.setSupportsGeneratedKeys( supportsGeneratedKeys );
+
+        return this;
     }
 
     /**
-     * Sets the StatementCache enabled (default) if true.<p>
+     * Enable (default) or disable the StatementCache.<p>
      *
      * StatementCaching is enabled by default to avoid breaking changes but should
      * be disabled when jdbc drivers that cache Statements. Per the Hikari author
      * who has expertise in statement caching, nobody can cache statements better
      * than the jdbc driver.
      * @param enabled should be set prior to setConnection
+     * @see Table#setStatementCacheEnabled(boolean)
      * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">https://github.com/brettwooldridge/HikariCP/issues/488</a>
      */
-    public Home setStatementCacheEnabled(boolean enabled) {
+    public Home<T> setStatementCacheEnabled(boolean enabled) {
         this.stmtCacheEnabled = enabled;
+        table.setStatementCacheEnabled(enabled);
+
         return this;
+    }
+
+    /** * Return true if the StatementCache is enabled (default). */
+    public boolean getStatementCacheEnabled() {
+        return stmtCacheEnabled;
     }
 
     /**
@@ -144,9 +156,10 @@ public class Home<T>
      * @param listeners (optional) will be notified of key StatementCache events such as for logging
      * @param perConCache_MaxEntries (optional) the LRU Statement will be evicted after this many entries (1000 default)
      * @param perConCache_MaxTtl (optional) the LRU Statement will be evicted after this (30 minutes default)
+     * Refer to the class javadoc for a detailed description.
      * @see #setConnection(Connection)
      */
-    public Home setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCache_MaxEntries, Long perConCache_MaxTtl)
+    public Home<T> setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCache_MaxEntries, Long perConCache_MaxTtl)
     {
         this.listeners = listeners;
         this.perConCache_MaxEntries = perConCache_MaxEntries;
@@ -157,10 +170,8 @@ public class Home<T>
             if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
             statementCache.setPerConCache_Maximums( perConCache_MaxEntries, perConCache_MaxTtl );
         }
-        if(table != null)
-        {
-            table.setStatementCacheConfig( listeners, perConCache_MaxEntries, perConCache_MaxTtl );
-        }
+        table.setStatementCacheConfig( listeners, perConCache_MaxEntries, perConCache_MaxTtl );
+
         return this;
     }
 
@@ -176,10 +187,8 @@ public class Home<T>
      * instance and then creates a new StatementCache. The internal connection
      * reference is set for both cases because Connection may be a new wrapped-Connection
      * such as if from HikariCP.getConnection.
-     * net.jextra.fauxjo.StatementCache#getConnKey(Connection) is used to determine
-     * if conn is the same as the last one set.
      * @param conn may be a real db Connection or one wrapped in a Connection facade
-     * @see net.jextra.fauxjo.StatementCache#getConnKey(Connection)
+     * @see net.jextra.fauxjo.StatementCache#getConnKey(Connection) is used if StatementCache is enabled
      */
     public boolean setConnection( Connection conn )
         throws SQLException
@@ -188,7 +197,7 @@ public class Home<T>
         {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             table.setConnection( conn );
-            return false; //do not clear the statementCache.
+            return false;
         }
         Long cnKy = StatementCache.getConnKey( conn );
         if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
@@ -226,6 +235,12 @@ public class Home<T>
         return beanBuilder;
     }
 
+    /**
+     * Return a new PreparedStatement from StatementCache if enabled else from connection.<p>
+     *
+     * If getStatementCacheEnabled is false, ensure to close in a try-resource or finally after use.
+     * @param sql to prepare
+     */
     public PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
@@ -368,6 +383,7 @@ public class Home<T>
         if( stmtCacheEnabled && statementCache != null)
         {
             statementCache.getDiagnosticCsv( conn, sb );
+            return;
         }
         throw new SQLException("stmtCacheEnabled is false");
     }
