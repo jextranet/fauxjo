@@ -22,6 +22,8 @@
 package net.jextra.fauxjo;
 
 import java.sql.*;
+import java.text.*;
+import java.time.format.*;
 import java.util.*;
 
 /**
@@ -56,16 +58,9 @@ public class Home<T>
     // Fields
     // ============================================================
 
-    private Connection conn;
-    private Long connKey;
     private boolean supportsGeneratedKeys = true;
     private Table<T> table;
     private BeanBuilder<T> beanBuilder;
-    private StatementCache statementCache;
-    private List<StatementCacheListener> listeners;
-    private Integer perConCache_MaxEntries;
-    private Long perConCache_MaxTtl;
-    private boolean stmtCacheEnabled = true;
 
     // ============================================================
     // Constructors
@@ -124,105 +119,36 @@ public class Home<T>
         return this;
     }
 
-    /**
-     * Enable (default) or disable the StatementCache.<p>
-     *
-     * StatementCaching is enabled by default to avoid breaking changes but should
-     * be disabled when jdbc drivers that cache Statements. Per the Hikari author
-     * who has expertise in statement caching, nobody can cache statements better
-     * than the jdbc driver.
-     * @param enabled should be set prior to setConnection
-     * @see Table#setStatementCacheEnabled(boolean)
-     * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">https://github.com/brettwooldridge/HikariCP/issues/488</a>
-     */
+    /** * @see {@link Table#setStatementCacheEnabled(boolean)} */
     public Home<T> setStatementCacheEnabled(boolean enabled) {
-        this.stmtCacheEnabled = enabled;
         table.setStatementCacheEnabled(enabled);
 
         return this;
     }
 
-    /** * Return true if the StatementCache is enabled (default). */
+    /** * @see {@link Table#getStatementCacheEnabled()} */
     public boolean getStatementCacheEnabled() {
-        return stmtCacheEnabled;
+        return table.getStatementCacheEnabled();
     }
 
-    /**
-     * Sets configuration passed to StatementCache if it is or becomes enabled.<p>
-     *
-     * Enables logging and aids diagnosing affinity of cache, thread, connection and its sql statements.
-     * The last two params guard against leaks caused by Prepared/CallableStatements
-     * concatenating instead of using parameters.
-     * @param listeners (optional) will be notified of key StatementCache events such as for logging
-     * @param perConCache_MaxEntries (optional) the LRU Statement will be evicted after this many entries (1000 default)
-     * @param perConCache_MaxTtl (optional) the LRU Statement will be evicted after this (30 minutes default)
-     * Refer to the class javadoc for a detailed description.
-     * @see #setConnection(Connection)
-     */
-    public Home<T> setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCache_MaxEntries, Long perConCache_MaxTtl)
+    /** * @see {@link Table#setStatementCacheConfig(List, Integer, Long)} */
+    public Home<T> setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCacheMaxEntries, Long perConCacheMaxAgeMillis)
     {
-        this.listeners = listeners;
-        this.perConCache_MaxEntries = perConCache_MaxEntries;
-        this.perConCache_MaxTtl = perConCache_MaxTtl;
-
-        if(statementCache != null)
-        {
-            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
-            statementCache.setPerConCache_Maximums( perConCache_MaxEntries, perConCache_MaxTtl );
-        }
-        table.setStatementCacheConfig( listeners, perConCache_MaxEntries, perConCache_MaxTtl );
+        table.setStatementCacheConfig( listeners, perConCacheMaxEntries, perConCacheMaxAgeMillis );
 
         return this;
     }
 
     public Connection getConnection()
     {
-        return conn;
+        return table.getConnection();
     }
 
-    /**
-     * Return true if stmtCache is enabled and the Connection is the same as last.<p>
-     *
-     * Otherwise, clears the StatementCache and passes the Connection to the Table
-     * instance and then creates a new StatementCache. The internal connection
-     * reference is set for both cases because Connection may be a new wrapped-Connection
-     * such as if from HikariCP.getConnection.
-     * @param conn may be a real db Connection or one wrapped in a Connection facade
-     * @see net.jextra.fauxjo.StatementCache#getConnKey(Connection) is used if StatementCache is enabled
-     */
+    /** * @see {@link Table#setConnection(Connection)} */
     public boolean setConnection( Connection conn )
         throws SQLException
     {
-        if(!stmtCacheEnabled)
-        {
-            this.conn = conn; //Update conn in case it is a new connection wrapper.
-            table.setConnection( conn );
-            return false;
-        }
-        Long cnKy = StatementCache.getConnKey( conn );
-        if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
-        {
-            this.conn = conn; //Update conn in case it is a new connection wrapper.
-            table.setConnection( conn );
-            return true; //If same Connection reuse it. Do not clear the statementCache.
-        }
-
-        //Is a new unique Connection so release all resources
-        if (statementCache != null )
-        {
-            statementCache.clear();
-        }
-
-        this.conn = conn;
-        this.connKey = cnKy;
-        table.setConnection( conn );
-        if (conn != null )
-        {
-            statementCache = new StatementCache().setCacheType(StatementCache.CacheType.Home);
-            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
-            statementCache.setPerConCache_Maximums( perConCache_MaxEntries, perConCache_MaxTtl );
-        }
-        return false;
+        return table.setConnection(conn);
     }
 
     public Table getTable()
@@ -235,27 +161,11 @@ public class Home<T>
         return beanBuilder;
     }
 
-    /**
-     * Return a new PreparedStatement from StatementCache if enabled else from connection.<p>
-     *
-     * If getStatementCacheEnabled is false, ensure to close in a try-resource or finally after use.
-     * @param sql to prepare
-     */
+    /** * @see {@link Table#prepareStatement(String)} */
     public PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
-        if( stmtCacheEnabled  && statementCache != null)
-        {
-            return statementCache.prepareStatement( conn, sql, supportsGeneratedKeys );
-        }
-        else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( sql ) )
-        {
-            return conn.prepareStatement( sql, Statement.RETURN_GENERATED_KEYS );
-        }
-        else
-        {
-            return conn.prepareStatement( sql );
-        }
+        return table.prepareStatement(sql);
     }
 
     public String getSchemaName()
@@ -274,7 +184,7 @@ public class Home<T>
     }
 
     /**
-     * This method attaches the schema name to the front of the name passed in.
+     * This method attaches the schema name to the front of the name passed in.<p>
      *
      * @return String that represents the given short name.
      */
@@ -373,19 +283,19 @@ public class Home<T>
         return beanBuilder.getIterator( rs );
     }
 
-    /**
-     * Append the contents of the StatementCache for the current Connection.
-     * @param sb will have cache entries appended
-     */
+    /** * @see {@link Table#getStatementCacheCsvForPrepStmts(StringBuilder)} */
     public void getStatementCacheCsvForPrepStmts(StringBuilder sb)
         throws Exception
     {
-        if( stmtCacheEnabled && statementCache != null)
-        {
-            statementCache.getDiagnosticCsv( conn, sb );
-            return;
-        }
-        throw new SQLException("stmtCacheEnabled is false");
+        table.getStatementCacheCsvForPrepStmts(sb);
+    }
+
+    /** * @see {@link Table#getStatementCacheStats(StringBuilder,DateTimeFormatter)} */
+    public StringBuilder getStatementCacheStats(StringBuilder strBldrToAppend, DateTimeFormatter optionalDtFormat)
+        throws SQLException
+    {
+        table.getStatementCacheStats(strBldrToAppend, optionalDtFormat);
+        return strBldrToAppend;
     }
 
 }
