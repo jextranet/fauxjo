@@ -1,6 +1,11 @@
 # fauxjo
 A database persistence layer for the real world.
 
+11.3.0-9 Removed StatementCache and Connection from Home and re-routed their calls 
+         to new methods in its Table. Added methods to return StatementCache stats. 
+         StatementCacheListener param API break from StatementCache.CacheType enum 
+         to StatementCache.Config object.
+
 11.3.0-8 Enabled StatementCache by default. Try-finally close PreparedStatements 
          in Table methods only if StatementCache is disabled. Other minor fixes 
          and improved javadoc.
