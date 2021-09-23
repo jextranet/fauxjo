@@ -116,13 +116,15 @@ public class Table<T>
      * @see Home for a detailed description
      * @see <a href="https://github.com/brettwooldridge/HikariCP/issues/488">https://github.com/brettwooldridge/HikariCP/issues/488</a>
      */
-    public Table setStatementCacheEnabled(boolean enabled) {
+    public Table setStatementCacheEnabled( boolean enabled )
+    {
         this.stmtCacheEnabled = enabled;
         return this;
     }
 
     /** * Return true if the StatementCache is enabled (default). */
-    public boolean getStatementCacheEnabled() {
+    public boolean getStatementCacheEnabled()
+    {
         return stmtCacheEnabled;
     }
 
@@ -136,20 +138,23 @@ public class Table<T>
      * @param perConCacheMaxAgeMillis (optional) max time to live before the LRU Statement will be evicted (30 minutes default)
      * @see #setConnection(Connection)
      */
-    public Table setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCacheMaxEntries, Long perConCacheMaxAgeMillis)
+    public Table setStatementCacheConfig( List<StatementCacheListener> listeners, Integer perConCacheMaxEntries, Long perConCacheMaxAgeMillis )
     {
         this.listeners = listeners;
         this.perConCacheMaxEntries = perConCacheMaxEntries;
         this.perConCacheMaxAgeMillis = perConCacheMaxAgeMillis;
-        if(statementCache != null)
+        if ( statementCache != null )
         {
-            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
+            if ( listeners != null )
+                for ( StatementCacheListener l : listeners )
+                    statementCache.addListener( l );
             statementCache.setPerConCache_Maximums( perConCacheMaxEntries, perConCacheMaxAgeMillis );
         }
         return this;
     }
 
-    protected Connection getConnection() {
+    protected Connection getConnection()
+    {
         return conn;
     }
 
@@ -167,30 +172,33 @@ public class Table<T>
     public boolean setConnection( Connection conn )
         throws SQLException
     {
-        if(!stmtCacheEnabled) {
+        if ( !stmtCacheEnabled )
+        {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             return false; //Not the same conn
         }
         Long cnKy = StatementCache.getConnKey( conn );
-        if(this.connKey != null && cnKy.longValue() == this.connKey.longValue())
+        if ( this.connKey != null && cnKy.longValue() == this.connKey.longValue() )
         {
             this.conn = conn; //Update conn in case it is a new connection wrapper.
             return true; //If same Connection return true. Do not clear the statementCache.
         }
 
         //Is a new unique Connection so clear the statementCache
-        if (statementCache != null )
+        if ( statementCache != null )
         {
             statementCache.clear();
         }
 
         this.conn = conn;
         this.connKey = cnKy;
-        if (conn != null )
+        if ( conn != null )
         {
             statementCache = new StatementCache();
-            if(listeners != null) for(StatementCacheListener l : listeners) statementCache.addListener( l );
-            statementCache.setPerConCache_Maximums(perConCacheMaxEntries, perConCacheMaxAgeMillis);
+            if ( listeners != null )
+                for ( StatementCacheListener l : listeners )
+                    statementCache.addListener( l );
+            statementCache.setPerConCache_Maximums( perConCacheMaxEntries, perConCacheMaxAgeMillis );
         }
         return false;
     }
@@ -224,7 +232,7 @@ public class Table<T>
     protected PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
-        if(stmtCacheEnabled && statementCache != null)
+        if ( stmtCacheEnabled && statementCache != null )
         {
             return statementCache.prepareStatement( conn, sql, supportsGeneratedKeys );
         }
@@ -265,7 +273,7 @@ public class Table<T>
         boolean cachedStm = false;
         try
         {
-            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
             {
                 insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
             }
@@ -283,7 +291,8 @@ public class Table<T>
         }
         finally
         {
-            if( insStatement != null && !cachedStm ) insStatement.close();
+            if ( insStatement != null && !cachedStm )
+                insStatement.close();
         }
         return rows;
     }
@@ -308,7 +317,7 @@ public class Table<T>
         boolean cachedStm = false;
         try
         {
-            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
             {
                 insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
             }
@@ -333,7 +342,8 @@ public class Table<T>
         }
         finally
         {
-            if( insStatement != null && !cachedStm ) insStatement.close();
+            if ( insStatement != null && !cachedStm )
+                insStatement.close();
         }
         return rows;
     }
@@ -361,7 +371,7 @@ public class Table<T>
         boolean cachedStm = false;
         try
         {
-            if( (cachedStm = stmtCacheEnabled && statementCache != null) )
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
             {
                 insStatement = statementCache.prepareStatement( conn, insertDef.getInsertSql(), supportsGeneratedKeys );
             }
@@ -384,12 +394,14 @@ public class Table<T>
         }
         finally
         {
-            if( insStatement != null && !cachedStm ) insStatement.close();
+            if ( insStatement != null && !cachedStm )
+                insStatement.close();
         }
         return rows;
     }
 
-    protected StatementCache getStatementCache() {
+    protected StatementCache getStatementCache()
+    {
         return statementCache;
     }
 
@@ -407,7 +419,8 @@ public class Table<T>
         boolean cachedStm = false;
         try
         {
-            if( (cachedStm = stmtCacheEnabled && statementCache != null) ) {
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
+            {
                 statement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
             }
             else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getUpdateSql() ) )
@@ -423,7 +436,8 @@ public class Table<T>
         }
         finally
         {
-            if( statement != null && !cachedStm ) statement.close();
+            if ( statement != null && !cachedStm )
+                statement.close();
         }
 
         return rows;
@@ -443,7 +457,8 @@ public class Table<T>
         boolean cachedStm = false;
         try
         {
-            if( (cachedStm = stmtCacheEnabled && statementCache != null) ) {
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
+            {
                 statement = statementCache.prepareStatement( conn, getDeleteSql(), supportsGeneratedKeys );
             }
             else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getDeleteSql() ) )
@@ -460,7 +475,8 @@ public class Table<T>
         }
         finally
         {
-            if( statement != null && !cachedStm ) statement.close();
+            if ( statement != null && !cachedStm )
+                statement.close();
         }
 
         return deletedAtLeast1row;
@@ -526,19 +542,20 @@ public class Table<T>
         for ( String key : getColumnInfos().keySet() )
         {
             ColumnInfo columnInfo = getColumnInfos().get( key );
-            Object val = getFieldValueFromBean( bean, key, columnInfo );
-
             FieldDef fieldDef = beanFieldDefs.get( key );
-            if ( fieldDef != null )
+            if ( fieldDef == null )
             {
-                if ( fieldDef.isPrimaryKey() )
-                {
-                    keyValues.add( new DataValue( val, columnInfo.getSqlType() ) );
-                }
-                else
-                {
-                    values.add( new DataValue( val, columnInfo.getSqlType() ) );
-                }
+                continue;
+            }
+
+            Object val = getFieldValueFromBean( bean, key, columnInfo );
+            if ( fieldDef.isPrimaryKey() )
+            {
+                keyValues.add( new DataValue( val, columnInfo.getSqlType() ) );
+            }
+            else
+            {
+                values.add( new DataValue( val, columnInfo.getSqlType() ) );
             }
         }
 
@@ -632,30 +649,31 @@ public class Table<T>
     }
 
     /** * Append json statistics about the statement cache if enabled else throws an exception. */
-    public void getStatementCacheStats(StringBuilder strBldrToAppend, DateTimeFormatter optionalDtFormat)
-        throws SQLException {
-        if( stmtCacheEnabled && statementCache != null)
+    public void getStatementCacheStats( StringBuilder strBldrToAppend, DateTimeFormatter optionalDtFormat )
+        throws SQLException
+    {
+        if ( stmtCacheEnabled && statementCache != null )
         {
-            statementCache.getStats(strBldrToAppend, optionalDtFormat);
-            strBldrToAppend.append(", nm: \"");
-            strBldrToAppend.append(beanClass.getSimpleName()).append("\"");
+            statementCache.getStats( strBldrToAppend, optionalDtFormat );
+            strBldrToAppend.append( ", nm: \"" );
+            strBldrToAppend.append( beanClass.getSimpleName() ).append( "\"" );
             return;
         }
-        throw new SQLException("stmtCacheEnabled is false");
+        throw new SQLException( "stmtCacheEnabled is false" );
     }
 
     /**
      * Append csv contents of the statement cache if enabled else throws an exception.
      * @param sb to append cache entries as csv
      */
-    public void getStatementCacheCsvForPrepStmts(StringBuilder sb)
+    public void getStatementCacheCsvForPrepStmts( StringBuilder sb )
         throws Exception
     {
-        if( stmtCacheEnabled && statementCache != null)
+        if ( stmtCacheEnabled && statementCache != null )
         {
             statementCache.getDiagnosticCsv( conn, sb );
         }
-        throw new SQLException("stmtCacheEnabled is false");
+        throw new SQLException( "stmtCacheEnabled is false" );
     }
 
     // ----------
@@ -663,7 +681,7 @@ public class Table<T>
     // ----------
 
     /**
-     * Optionally passing in a actual bean instant allows the insert statement to be exclude columns that can have defaulted values and are
+     * Optionally passing in an actual bean instant allows the insert statement to exclude columns that can have defaulted values and are
      * also null in the bean.
      */
     protected InsertDef getInsertDef( T bean )
@@ -785,7 +803,8 @@ public class Table<T>
         }
         finally
         {
-            if( rs != null ) rs.close();
+            if ( rs != null )
+                rs.close();
         }
     }
 
@@ -822,18 +841,21 @@ public class Table<T>
 
         HashMap<String, ColumnInfo> map = new HashMap<>();
         ResultSet rs = null;
-        try {
-            rs = conn.getMetaData().getColumns(null, real.schemaName, real.tableName, null);
-            while (rs.next()) {
-                String realName = rs.getString(COLUMN_NAME);
-                Integer type = rs.getInt(DATA_TYPE);
+        try
+        {
+            rs = conn.getMetaData().getColumns( null, real.schemaName, real.tableName, null );
+            while ( rs.next() )
+            {
+                String realName = rs.getString( COLUMN_NAME );
+                Integer type = rs.getInt( DATA_TYPE );
 
-                map.put(realName.toLowerCase(), new ColumnInfo(realName, type));
+                map.put( realName.toLowerCase(), new ColumnInfo( realName, type ) );
             }
         }
         finally
         {
-            if( rs != null ) rs.close();
+            if ( rs != null )
+                rs.close();
         }
 
         // Only set field if all went well
@@ -861,7 +883,8 @@ public class Table<T>
         }
         finally
         {
-            if( rs != null ) rs.close();
+            if ( rs != null )
+                rs.close();
         }
         RealTableName bean = searchForTable( tableTypes, schemaName, tableName );
         if ( bean != null )
@@ -905,7 +928,8 @@ public class Table<T>
         }
         finally
         {
-            if( rs != null ) rs.close();
+            if ( rs != null )
+                rs.close();
         }
 
         return null;
