@@ -51,7 +51,7 @@ import java.util.*;
  * <a href="https://jdbc.postgresql.org/documentation/94/connect.html">Hikari rapid recovery 2</a><p>
  * @see #setStatementCacheEnabled(boolean)
  */
-public class Home<T>
+public class Home<T> implements AutoCloseable
 {
     // ============================================================
     // Fields
@@ -150,6 +150,13 @@ public class Home<T>
         throws SQLException
     {
         return table.setConnection( conn );
+    }
+
+    @Override
+    public void close()
+        throws SQLException
+    {
+        table.close();
     }
 
     public Table getTable()

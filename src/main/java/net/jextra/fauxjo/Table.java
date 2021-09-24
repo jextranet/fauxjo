@@ -31,7 +31,7 @@ import net.jextra.fauxjo.coercer.*;
 /**
  * Java representation and helper methods for a database table.
  */
-public class Table<T>
+public class Table<T> implements AutoCloseable
 {
     // ============================================================
     // Fields
@@ -156,6 +156,16 @@ public class Table<T>
     protected Connection getConnection()
     {
         return conn;
+    }
+
+    @Override
+    public void close()
+        throws SQLException
+    {
+        if ( conn != null )
+        {
+            conn.close();
+        }
     }
 
     /**
