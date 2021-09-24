@@ -22,7 +22,6 @@
 package net.jextra.fauxjo;
 
 import java.sql.*;
-import java.text.*;
 import java.time.format.*;
 import java.util.*;
 
@@ -120,19 +119,21 @@ public class Home<T>
     }
 
     /** * @see {@link Table#setStatementCacheEnabled(boolean)} */
-    public Home<T> setStatementCacheEnabled(boolean enabled) {
-        table.setStatementCacheEnabled(enabled);
+    public Home<T> setStatementCacheEnabled( boolean enabled )
+    {
+        table.setStatementCacheEnabled( enabled );
 
         return this;
     }
 
     /** * @see {@link Table#getStatementCacheEnabled()} */
-    public boolean getStatementCacheEnabled() {
+    public boolean getStatementCacheEnabled()
+    {
         return table.getStatementCacheEnabled();
     }
 
     /** * @see {@link Table#setStatementCacheConfig(List, Integer, Long)} */
-    public Home<T> setStatementCacheConfig(List<StatementCacheListener> listeners, Integer perConCacheMaxEntries, Long perConCacheMaxAgeMillis)
+    public Home<T> setStatementCacheConfig( List<StatementCacheListener> listeners, Integer perConCacheMaxEntries, Long perConCacheMaxAgeMillis )
     {
         table.setStatementCacheConfig( listeners, perConCacheMaxEntries, perConCacheMaxAgeMillis );
 
@@ -148,7 +149,7 @@ public class Home<T>
     public boolean setConnection( Connection conn )
         throws SQLException
     {
-        return table.setConnection(conn);
+        return table.setConnection( conn );
     }
 
     public Table getTable()
@@ -165,7 +166,7 @@ public class Home<T>
     public PreparedStatement prepareStatement( String sql )
         throws SQLException
     {
-        return table.prepareStatement(sql);
+        return table.prepareStatement( sql );
     }
 
     public String getSchemaName()
@@ -284,17 +285,17 @@ public class Home<T>
     }
 
     /** * @see {@link Table#getStatementCacheCsvForPrepStmts(StringBuilder)} */
-    public void getStatementCacheCsvForPrepStmts(StringBuilder sb)
+    public void getStatementCacheCsvForPrepStmts( StringBuilder sb )
         throws Exception
     {
-        table.getStatementCacheCsvForPrepStmts(sb);
+        table.getStatementCacheCsvForPrepStmts( sb );
     }
 
-    /** * @see {@link Table#getStatementCacheStats(StringBuilder,DateTimeFormatter)} */
-    public StringBuilder getStatementCacheStats(StringBuilder strBldrToAppend, DateTimeFormatter optionalDtFormat)
+    /** * @see {@link Table#getStatementCacheStats(StringBuilder, DateTimeFormatter)} */
+    public StringBuilder getStatementCacheStats( StringBuilder strBldrToAppend, DateTimeFormatter optionalDtFormat )
         throws SQLException
     {
-        table.getStatementCacheStats(strBldrToAppend, optionalDtFormat);
+        table.getStatementCacheStats( strBldrToAppend, optionalDtFormat );
         return strBldrToAppend;
     }
 

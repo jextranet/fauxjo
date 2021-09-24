@@ -25,9 +25,9 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * Groups a number of Home objects together into a common ConnectionSupplier.
+ * Groups a number of Home objects together into to be used with a common Connection.
  */
-public class HomeGroup
+public class HomeGroup implements AutoCloseable
 {
     // ============================================================
     // Fields
@@ -75,6 +75,16 @@ public class HomeGroup
         for ( Home<?> home : homes.values() )
         {
             home.setConnection( conn );
+        }
+    }
+
+    @Override
+    public void close()
+        throws SQLException
+    {
+        if ( conn != null )
+        {
+            conn.close();
         }
     }
 
