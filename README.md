@@ -1,7 +1,11 @@
 # fauxjo
 A database persistence layer for the real world.
 
-11.3.0-12   Also make Home and Table AutoCloseable.
+11.3.0-13   Made ResultSetIterator AutoCloseable so that it could be used in the new-style 
+            an auto-closable try block.
+
+11.3.0-12   Made Home and Table AutoCloseable so that it could be used in the new-style 
+            an auto-closable try block.
 
 11.3.0-11   Made HomeGroup AutoCloseable so that it could be used in the new-style an
             auto-closable try block.
