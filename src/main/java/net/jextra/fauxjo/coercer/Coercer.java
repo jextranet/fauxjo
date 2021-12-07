@@ -60,6 +60,7 @@ public class Coercer
         coercerMap.put( java.sql.Timestamp.class, new TimestampCoercer() );
         coercerMap.put( Instant.class, new InstantCoercer() );
         coercerMap.put( UUID.class, new UuidCoercer() );
+        coercerMap.put( byte[].class, new ByteArrayCoercer() );
     }
 
     // ============================================================

@@ -958,7 +958,8 @@ public class Table<T> implements AutoCloseable
         catch ( FauxjoException ex )
         {
             throw new FauxjoException(
-                "Failed to coerce " + fullTableName + "." + columnInfo.getRealName() + " for insert: " + key + ":" + columnInfo.getRealName(), ex );
+                String.format( "Failed to coerce %s#%s to %s(%s) %s for insert", bean.getClass().getSimpleName(), key,
+                    fullTableName, columnInfo.getRealName(), targetClass.getSimpleName() ), ex );
         }
 
         return val;

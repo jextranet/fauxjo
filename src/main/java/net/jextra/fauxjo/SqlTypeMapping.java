@@ -55,7 +55,7 @@ public class SqlTypeMapping extends HashMap<Integer, Class<?>>
         put( java.sql.Types.NVARCHAR, String.class );
         put( java.sql.Types.CHAR, String.class );
         put( java.sql.Types.CLOB, String.class );
-        put( java.sql.Types.BINARY, String.class );
+        put( java.sql.Types.BINARY, byte[].class );
         put( java.sql.Types.LONGNVARCHAR, String.class );
         put( java.sql.Types.LONGVARBINARY, String.class );
         put( java.sql.Types.LONGVARCHAR, String.class );

@@ -21,6 +21,7 @@
 
 package net.jextra.fauxjo.coercer;
 
+import java.nio.charset.*;
 import java.sql.*;
 import java.time.*;
 import net.jextra.fauxjo.*;
@@ -78,6 +79,10 @@ public class StringCoercer implements TypeCoercer<String>
         else if ( targetClass.equals( Instant.class ) )
         {
             return Timestamp.valueOf( value ).toInstant();
+        }
+        else if ( targetClass.equals( byte[].class ) )
+        {
+            return value.getBytes( StandardCharsets.UTF_8 );
         }
         else if ( targetClass.isEnum() )
         {
