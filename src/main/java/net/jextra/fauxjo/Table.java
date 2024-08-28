@@ -46,7 +46,7 @@ public class Table<T> implements AutoCloseable
     private Connection conn;
     private Long connKey;
     private StatementCache statementCache;
-    private boolean stmtCacheEnabled = true;
+    private boolean stmtCacheEnabled = false;
     private String fullTableName;
     private String schemaName;
     private String tableName;
