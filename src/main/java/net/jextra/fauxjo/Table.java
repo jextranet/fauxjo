@@ -454,6 +454,57 @@ public class Table<T> implements AutoCloseable
     }
 
     /**
+     * Update multiple beans in the database in one batched statement using a batched PreparedStatement.
+     * If StatementCache is enabled, the PreparedStatement will be closed upon
+     * the next new Connection else is closed here in a finally block.
+     * @param beans Collection of beans to be updated
+     * @throws SQLException For errors generating SQL, executing the statement, or closing the connection
+     * @return int[] Where each int is the number of rows updated for a given update statement in the batch
+     */
+    public int[] updateBatch( Collection<T> beans )
+        throws SQLException
+    {
+        if ( beans == null || beans.isEmpty() )
+        {
+            return new int[] {};
+        }
+
+        PreparedStatement updateStatement = null;
+        int[] rows;
+        boolean cachedStm = false;
+        try
+        {
+            if ( ( cachedStm = stmtCacheEnabled && statementCache != null ) )
+            {
+                updateStatement = statementCache.prepareStatement( conn, getUpdateSql(), supportsGeneratedKeys );
+            }
+            else if ( supportsGeneratedKeys && SqlInspector.isInsertStatement( getUpdateSql() ) )
+            {
+                updateStatement = conn.prepareStatement( getUpdateSql(), Statement.RETURN_GENERATED_KEYS );
+            }
+            else
+            {
+                updateStatement = conn.prepareStatement( getUpdateSql() );
+            }
+
+            for ( T bean : beans )
+            {
+                setUpdateValues( updateStatement, bean );
+                updateStatement.addBatch();
+            }
+
+            rows = updateStatement.executeBatch();
+        }
+        finally
+        {
+            if ( updateStatement != null && !cachedStm )
+                updateStatement.close();
+        }
+
+        return rows;
+    }
+
+    /**
      * Convert the bean into an delete statement and execute it.<p>
      *
      * If StatementCache is enabled, the PreparedStatement will be closed upon
