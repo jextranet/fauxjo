@@ -457,9 +457,9 @@ public class Table<T> implements AutoCloseable
      * Update multiple beans in the database in one batched statement using a batched PreparedStatement.
      * If StatementCache is enabled, the PreparedStatement will be closed upon
      * the next new Connection else is closed here in a finally block.
-     * @param beans Collection of beans to be updated
-     * @throws SQLException For errors generating SQL, executing the statement, or closing the connection
-     * @return int[] Where each int is the number of rows updated for a given update statement in the batch
+     * @param beans Collection of beans to be updated.
+     * @throws SQLException For errors generating SQL, executing the statement, or closing the connection.
+     * @return int[] Where each int is the number of rows updated for a given update statement in the batch.
      */
     public int[] updateBatch( Collection<T> beans )
         throws SQLException
