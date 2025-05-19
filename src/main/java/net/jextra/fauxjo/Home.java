@@ -220,6 +220,12 @@ public class Home<T> implements AutoCloseable
         return table.insert( beans );
     }
 
+    public int[] update( Collection<T> beans )
+        throws SQLException
+    {
+        return table.updateBatch( beans );
+    }
+
     public int update( T bean )
         throws SQLException
     {
